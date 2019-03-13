@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 # -*- coding: utf-8 -*-
 # @Time: 2019/3/12
 # @File: operate_mongo.py
@@ -29,16 +29,15 @@ class MongoDB(object):
         self.collection = self.db[self.args["collection"]]
 
     def get(self):
-        while True:
+        while self.obj.is_alive():
             # docs = self.collection.find({"id": random.randint(1, 10000)})
             try:
                 docs = self.collection.find_one()
             except Exception as e:
                 print("Error: {}.".format(e))
-            time.sleep(random.random())
 
     def insert_one(self):
-        while True:
+        while self.obj.is_alive():
             data = {
                 "id": str(random.randint(1, 10000)),
                 "data": datetime.datetime.utcnow()
@@ -49,7 +48,7 @@ class MongoDB(object):
                 print("Error: {}.".format(e))
 
     def insert_many(self):
-        while True:
+        while self.obj.is_alive():
             date = [{
                 "id": str(i),
                 "date": datetime.datetime.utcnow()
@@ -60,8 +59,8 @@ class MongoDB(object):
                 print("Error: {}.".format(e))
 
     def run(self, obj):
-        while obj.is_alive():
-            getattr(self, self.args["action"])()
+        self.obj = obj
+        getattr(self, self.args["action"])()
 
     @staticmethod
     def timing(duration):
@@ -69,7 +68,8 @@ class MongoDB(object):
             sys.stdout.write("{}".format(i).center(10, "=") + "\r")
             sys.stdout.flush()
             time.sleep(1)
-
+        else:
+            return
 
 def start(**kwargs):
     args = kwargs["args"]
@@ -85,13 +85,13 @@ def start(**kwargs):
 
 if __name__ == "__main__":
     args = {
-        "host": "10.15.101.77",
-        "port": 27047,
+        "host": "10.15.101.253",
+        "port": 27027,
         "db": "test",
         "collection": "test",
-        "threads": 500,
-        "action": "insert_one",    # 操作方法
-        "duration": 200     # 持续多少秒
+        "threads": 1,
+        "action": "insert_many",    # 操作方法
+        "duration": 90     # 持续多少秒
     }
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     try:
