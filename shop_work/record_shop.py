@@ -5,6 +5,7 @@
 import re
 import pymongo
 import os
+import datetime
 
 
 class OptMongodb(object):
@@ -75,6 +76,9 @@ class OptCSV(OptMongodb):
         print("Same rate: {:0.2%}".format(len(same_list) / len(self.result.keys())))
 
     def record_data(self):
+        """
+        写入数据库，一次写入2k条
+        """
         n = 0
         data = list(self.result.values())
         while n < len(data):
@@ -92,6 +96,9 @@ class OptCSV(OptMongodb):
             n += 2000
 
     def compare_serialID(self):
+        """
+        将订单ID从MongoDB中取出，然后对比当前数据文件，如果订单ID相同，则去重
+        """
         db_data = set(self.get_serial_id())
         csv_serial_id = set([x for x in self.result.keys()])
         same_data = list(db_data.intersection(csv_serial_id))
@@ -106,6 +113,7 @@ class OptCSV(OptMongodb):
         self.record_data()      # 写入DB
         if self.illegal_data:   # 打印未写入DB的数据
             f = open("result", "w", encoding="utf-8")
+            f.write("{} [ {} ]".format(str(datetime.datetime.now()), self.args["filename"]).center(50, "*"))
             illegal_data = "Illegal Data".center(50, "=")
             f.write(illegal_data + "\n")
             print(illegal_data)
@@ -124,11 +132,11 @@ class OptCSV(OptMongodb):
 
 if __name__ == "__main__":
     args = {
-        "host": "db_host",
-        "port": 27017,
-        "db": "db_name",
-        "collection": "collection_name",
-        "filename": "csv_filename"
+        "host": "10.15.101.63",
+        "port": 27027,
+        "db": "blockchain_test",
+        "collection": "LocationFromWeb",
+        "filename": "out0218-0221.csv"
     }
     opt = OptCSV(args=args)
     opt.run()
