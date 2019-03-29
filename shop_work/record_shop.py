@@ -44,7 +44,7 @@ class OptMongodb(object):
 class OptCSV(OptMongodb):
 
     def __init__(self, **kwargs):
-        self.match_info = re.compile(r"\n?(\d{18}),(.+?),(.+?)\s(\S+?)\s?，(\d+?),下单时间：(.*)")
+        self.match_info = re.compile(r"\n?(\d{18}),(.+?),(.+?)\s(\S+?)\s?，(\d+?\-?\d+?),下单时间：(.*)")
         self.args = kwargs["args"]
         self.illegal_data = {"illegal": [], "exists": []}
         self.result = {}
@@ -112,7 +112,7 @@ class OptCSV(OptMongodb):
         self.compare_serialID() # 去重
         self.record_data()      # 写入DB
         if self.illegal_data:   # 打印未写入DB的数据
-            f = open("result", "w", encoding="utf-8")
+            f = open("result", "a", encoding="utf-8")
             f.write("{} [ {} ]".format(str(datetime.datetime.now()), self.args["filename"]).center(50, "*"))
             illegal_data = "Illegal Data".center(50, "=")
             f.write(illegal_data + "\n")
@@ -132,11 +132,11 @@ class OptCSV(OptMongodb):
 
 if __name__ == "__main__":
     args = {
-        "host": "10.15.101.63",
+        "host": "10.15.101.77",
         "port": 27027,
         "db": "blockchain_test",
         "collection": "LocationFromWeb",
-        "filename": "out0218-0221.csv"
+        "filename": "out0301.csv"
     }
     opt = OptCSV(args=args)
     opt.run()
