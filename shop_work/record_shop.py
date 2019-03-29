@@ -44,7 +44,7 @@ class OptMongodb(object):
 class OptCSV(OptMongodb):
 
     def __init__(self, **kwargs):
-        self.match_info = re.compile(r"\n?(\d{18}),(.+?),(.+?)\s(\S+?)\s?，(\d+?\-?\d+?),下单时间：(.*)")
+        self.match_info = re.compile(r"\n?(\d{18}),(.+?),(.+?)\s(\S+?)\s+?，(\+?\d?\d?\??\d+?\-?\s?\??\d+?\??\-?\s?\d+?\??),下单时间：(.*)")
         self.args = kwargs["args"]
         self.illegal_data = {"illegal": [], "exists": []}
         self.result = {}
@@ -113,15 +113,17 @@ class OptCSV(OptMongodb):
         self.record_data()      # 写入DB
         if self.illegal_data:   # 打印未写入DB的数据
             f = open("result", "a", encoding="utf-8")
-            f.write("{} [ {} ]".format(str(datetime.datetime.now()), self.args["filename"]).center(50, "*"))
+            f.write("{} [ {} ]".format(str(datetime.datetime.now()), self.args["filename"]).center(50, "*") + "\n")
             illegal_data = "Illegal Data".center(50, "=")
             f.write(illegal_data + "\n")
             print(illegal_data)
             for key, value in self.illegal_data.items():
                 for sub_value in value:
                     d = key + ":" + str(sub_value)
-                    f.write(d + "\n")
                     print(d)
+            else:
+                for illegal in self.illegal_data["illegal"]:
+                    f.write(illegal + "\n")
             insert_num = len(self.result)   # 写入DB的数据number
             final_result = "Total {} data | Insert {} data | Illegal data: {} | Exists data: {} | Record rate: {:.2%}"\
                 .format(self.num, insert_num, len(self.illegal_data["illegal"]), len(self.illegal_data["exists"]), insert_num/self.num)
@@ -132,11 +134,11 @@ class OptCSV(OptMongodb):
 
 if __name__ == "__main__":
     args = {
-        "host": "10.15.101.77",
+        "host": "10.15.101.63",
         "port": 27027,
         "db": "blockchain_test",
         "collection": "LocationFromWeb",
-        "filename": "out0301.csv"
+        "filename": "out0214-0216.csv"
     }
     opt = OptCSV(args=args)
     opt.run()

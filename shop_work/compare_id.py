@@ -76,14 +76,14 @@ if __name__ == "__main__":
             "port": 27027,
             "db": "blockchain_test",
             "collection": "LocationFromWeb",
-            "match_str": {"OrderTime": {"$gt": "2019-02-18 00:00", "$lt": "2019-02-19 00:00"}}
+            "match_str": {"OrderTime": {"$gte": "2019-02-18 00:00:00", "$lt": "2019-02-19 00:00:00"}}
         },
         "right": {
             "host": "10.15.101.63",
             "port": 27027,
             "db": "blockchain_test",
             "collection": "test_new_speed_order_sheets",
-            "match_str": {"CreateTime": {"$gt": datetime.datetime(2019, 2, 18), "$lt": datetime.datetime(2019, 2, 19)}}
+            "match_str": {"CreateTime": {"$gte": datetime.datetime(2019, 2, 18, 0, 0, 0), "$lt": datetime.datetime(2019, 2, 19, 0, 0, 0)}}
         }
     }
     opt = CompareID(args=args)
