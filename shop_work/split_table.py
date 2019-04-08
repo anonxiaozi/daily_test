@@ -12,45 +12,68 @@ import argparse
 class SplitDB(object):
 
     filter_rule = [
-        {
-            '$project': {
-                '_id': 0,
-                'date_format': {
-                    '$dateToParts': {
-                        'date': '$date',
-                        'timezone': '+08:00'
-                    }
-                },
-                'storeId': '$storeId',
-                'accountname': '$accountname',
-                'storename': '$storename',
-                'date': '$date',
-                'sum': '$sum',
-                'count': '$count',
-                'fulladdress': '$fulladdress',
-                'province': '$province',
-                'city': '$city',
-                'district': '$district',
-                'zone': '$zone',
-                'telephone': '$telephone',
-                'cellphone': '$cellphone',
-                'longitude': '$longitude',
-                'latitude': '$latitude'
-            }
-        }, {
-            '$match': {
-                'date_format.year': {
-                    '$eq': 2019
-                },
-                'date_format.month': {
-                    '$eq': 2
+    {
+        '$project': {
+            '_id': 0,
+            'date_format': {
+                '$dateToParts': {
+                    'date': '$date',
+                    'timezone': '+08:00'
                 }
-            }
-        }, {
-            '$project': {
-                'date_format': 0
+            },
+            'data': '$$ROOT'
+        }
+    }, {
+        '$match': {
+            'date_format.year': {
+                '$eq': 2019
+            },
+            'date_format.month': {
+                '$eq': 3
             }
         }
+    }, {
+        '$group': {
+            '_id': '$data.storeId',
+            'sum': {
+                '$sum': '$data.sum'
+            },
+            'count': {
+                '$sum': 1
+            },
+            'data': {
+                '$push': '$data'
+            }
+        }
+    }, {
+        '$unwind': {
+            'path': '$data'
+        }
+    }, {
+        '$project': {
+            '_id': 0,
+            'avg_sum': {
+                '$divide': [
+                    '$sum', '$count'
+                ]
+            },
+            'storeId': '$data.storeId',
+            'accountname': '$data.accountname',
+            'storename': '$data.storename',
+            'date': '$data.date',
+            'sum': '$sum',
+            'count': '$count',
+            'fulladdress': '$data.fulladdress',
+            'province': '$data.province',
+            'city': '$data.city',
+            'district': '$data.district',
+            'zone': '$data.zone',
+            'telephone': '$data.telephone',
+            'cellphone': '$data.cellphone',
+            'longitude': '$data.longitude',
+            'latitude': '$data.latitude'
+        }
+    }
     ]
 
     def __init__(self, **kwargs):
@@ -108,7 +131,7 @@ class SplitDB(object):
         s = datetime.datetime.strptime("{year}-{month}-{day}".format(**self.args), "%Y-%m-%d")
         e = s + datetime.timedelta(weeks=1)
         self.filter_rule[1]["$match"] = {
-            'date': {
+            'data.date': {
                 '$gte': s,
                 '$lt': e
             }
@@ -122,7 +145,7 @@ class SplitDB(object):
         next_month_2 = next_month_1 + datetime.timedelta(days = self.get_next_month_days(next_month_1))
         end_season_date = next_month_2  + datetime.timedelta(days = start_date.day)
         self.filter_rule[1]["$match"] = {
-            'date': {
+            'data.date': {
                 '$gte': start_date,
                 '$lt': end_season_date
             }
@@ -138,7 +161,7 @@ class SplitDB(object):
         next_month_2 = next_month_1 + datetime.timedelta(days=self.get_next_month_days(next_month_1))
         harf_year_date = next_month_2 + datetime.timedelta(days=start_date.day)
         self.filter_rule[1]["$match"] = {
-            'date': {
+            'data.date': {
                 '$gte': start_date,
                 '$lt': harf_year_date
             }
