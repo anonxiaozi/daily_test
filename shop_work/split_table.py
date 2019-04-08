@@ -46,10 +46,6 @@ class SplitDB(object):
             }
         }
     }, {
-        '$unwind': {
-            'path': '$data'
-        }
-    }, {
         '$project': {
             '_id': 0,
             'avg_sum': {
@@ -60,7 +56,7 @@ class SplitDB(object):
             'storeId': '$data.storeId',
             'accountname': '$data.accountname',
             'storename': '$data.storename',
-            'date': '$data.date',
+            # 'date': '$data.date',
             'sum': '$sum',
             'count': '$count',
             'fulladdress': '$data.fulladdress',
@@ -90,11 +86,12 @@ class SplitDB(object):
         self.db = self.conn[self.args["db"]]
         self.write_table = self.db[self.args["write"]]
         self.read_table = self.db[self.args["read"]]
-        self.filter_rule.append({"$out": self.args["write"]})
+        # self.filter_rule.append({"$out": self.args["write"]})
 
-    def insert_many(self, data):
+    def insert_many(self):
+        result = self.get_data()
         try:
-            self.write_table.insert_many(data)
+            self.write_table.insert_many(result)
         except Exception as e:
             print("Error: {}.".format(e))
 
@@ -107,7 +104,17 @@ class SplitDB(object):
         if not isinstance(self.filter_rule, list):
             sys.exit(1)
         cursor = self.read_table.aggregate(self.filter_rule)
+        result_list = [x for x in cursor]
+        result = []
+        for item in result_list:
+            d = {}
+            for key, value in item.items():
+                if isinstance(value, list):
+                    value = value[0]
+                d[key] = value
+            result.append(d)
         cursor.close()
+        return result
 
     def do_year(self):
         self.filter_rule[1]["$match"] = {
@@ -171,7 +178,7 @@ class SplitDB(object):
         self.filter_rule = self.filter_rule.append({"$out": self.args["write"]})
 
     def run(self):
-        return getattr(self, "get_data", self.echo)()
+        return getattr(self, "insert_many", self.echo)()
 
     @staticmethod
     def echo():
