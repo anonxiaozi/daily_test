@@ -197,7 +197,7 @@ class SplitDB(object):
         }
 
     def do_all(self):
-        self.filter_rule = self.filter_rule.append({"$out": self.args["write"]})
+        self.filter_rule = [{'$out': self.write_table_name}]
 
     def run(self):
         return getattr(self, "get_data", self.echo)()
