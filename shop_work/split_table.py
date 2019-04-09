@@ -211,19 +211,6 @@ def get_args():
 
 
 if __name__ == "__main__":
-    # args = {
-    #     "host": "10.15.101.63",
-    #     "port": 27027,
-    #     "filter": "season",   # 过滤规则
-    #     "operate": "get_data",
-    #     "db": "blockchain_test",
-    #     "read": "StoreTransaction_hash",
-    #     "write": "test111",
-    #     "year": 2018,
-    #     "month": 11,
-    #     "day": 20
-    # }
-
     args = vars(get_args().parse_args())
     opt = SplitDB(args=args)
     data = opt.run()
