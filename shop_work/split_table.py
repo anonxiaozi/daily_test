@@ -110,7 +110,7 @@ class SplitDB(object):
     def get_data(self):
         getattr(self, "do_{}".format(self.args["filter"]), self.echo)()
         if self.args["filter"] == "all":        # 拷贝collection全部内容
-            cursor = self.read_table.aggregate(self.filter_rule)
+            cursor = self.read_table.aggregate(self.filter_rule, allowDiskUse=True)
             cursor.close()
             return
         if not isinstance(self.filter_rule, list):
@@ -197,7 +197,56 @@ class SplitDB(object):
         }
 
     def do_all(self):
-        self.filter_rule = [{'$out': self.write_table_name}]
+        self.filter_rule = [
+            {
+                '$group': {
+                    '_id': '$storeId',
+                    'sum': {
+                        '$sum': '$sum'
+                    },
+                    'count': {
+                        '$sum': 1
+                    },
+                    'data': {
+                        '$push': '$$ROOT'
+                    }
+                }
+            }, {
+                '$project': {
+                    'storeId': '$_id',
+                    'sum': '$sum',
+                    'count': '$count',
+                    'data0': {
+                        '$arrayElemAt': [
+                            '$data', 0
+                        ]
+                    }
+                }
+            }, {
+                '$project': {
+                    '_id': 0,
+                    'avg_sum': {
+                        '$divide': [
+                            '$sum', '$count'
+                        ]
+                    },
+                    'storeId': '$storeId',
+                    'accountname': '$data0.accountname',
+                    'storename': '$data0.storename',
+                    'sum': '$sum',
+                    'count': '$count',
+                    'fulladdress': '$data0.fulladdress',
+                    'province': '$data0.province',
+                    'city': '$dat0.city',
+                    'district': '$data0.district',
+                    'zone': '$data0.zone',
+                    'telephone': '$data0.telephone',
+                    'cellphone': '$data0.cellphone',
+                    'longitude': '$data0.longitude',
+                    'latitude': '$data0.latitude'
+                }
+            }, {"$out": self.write_table_name}
+        ]
 
     def run(self):
         return getattr(self, "get_data", self.echo)()
