@@ -94,9 +94,11 @@ class SplitDB(object):
         #     authMechanism=self.args["SCRAM-SHA-256"]
         # )
         self.db = self.conn[self.args["db"]]
-        self.write_table = self.db[self.args["write"]]
+        self.date_format = datetime.datetime.strptime('{year}-{month}-{day}'.format(**self.args), '%Y-%m-%d')
+        self.write_table_name = "cache_{}_{}".format(self.args['filter'], self.date_format.strftime('%Y-%m-%d').replace('-', ''))
+        self.write_table = self.db[self.write_table_name]
         self.read_table = self.db[self.args["read"]]
-        self.filter_rule.append({"$out": self.args["write"]})
+        self.filter_rule.append({"$out": self.write_table_name})
 
     def insert_many(self):
         result = self.get_data()
@@ -113,8 +115,28 @@ class SplitDB(object):
             return
         if not isinstance(self.filter_rule, list):
             sys.exit(1)
-        cursor = self.read_table.aggregate(self.filter_rule)
+        cursor = self.read_table.aggregate(self.filter_rule, allowDiskUse=True)
         cursor.close()
+
+        # 添加Index
+        count_idx = pymongo.IndexModel([('count', pymongo.ASCENDING)], name='count_idx')
+        num_idx = pymongo.IndexModel([('num', pymongo.ASCENDING)], name='num_idx')
+        storeId_idx = pymongo.IndexModel([('storeId', pymongo.ASCENDING)], name='storeId_idx')
+        avg_sum_idx = pymongo.IndexModel([('avg_sum', pymongo.DESCENDING)], name='avg_sum_idx')
+        province_idx = pymongo.IndexModel([('province', pymongo.ASCENDING)], name='province_idx')
+        province_city_idx = pymongo.IndexModel([('province', pymongo.ASCENDING), ('city', pymongo.ASCENDING)], name='province_city_idx')
+        province_city_district_idx = pymongo.IndexModel([
+            ('province', pymongo.ASCENDING),
+            ('city', pymongo.ASCENDING),
+            ('district', pymongo.ASCENDING)
+        ], name='province_city_district_idx')
+        province_city_district_zone_idx = pymongo.IndexModel([
+            ('province', pymongo.ASCENDING),
+            ('city', pymongo.ASCENDING),
+            ('district', pymongo.ASCENDING),
+            ('zone', pymongo.ASCENDING)
+        ], name='province_city_district_zone_idx')
+        self.write_table.create_indexes([count_idx, num_idx, storeId_idx, avg_sum_idx, province_idx, province_city_idx, province_city_district_idx, province_city_district_zone_idx])
 
     def do_year(self):
         self.filter_rule[1]["$match"] = {
@@ -136,7 +158,7 @@ class SplitDB(object):
 
     def do_week(self):
         s = datetime.datetime.strptime("{year}-{month}-{day}".format(**self.args), "%Y-%m-%d")
-        e = s + datetime.timedelta(weeks=1)
+        e = s + datetime.timedelta(weeks=1) + datetime.timedelta(days=1)
         self.filter_rule[1]["$match"] = {
             'data.date': {
                 '$gte': s,
@@ -150,23 +172,23 @@ class SplitDB(object):
         current_month_remain_days = current_month_days - start_date.day
         next_month_1 = start_date + datetime.timedelta(days = current_month_remain_days) + datetime.timedelta(days = self.get_next_month_days(start_date))
         next_month_2 = next_month_1 + datetime.timedelta(days = self.get_next_month_days(next_month_1))
-        end_season_date = next_month_2  + datetime.timedelta(days = start_date.day)
+        end_season_date = next_month_2  + datetime.timedelta(days = start_date.day) + datetime.timedelta(days=1)
         self.filter_rule[1]["$match"] = {
             'data.date': {
                 '$gte': start_date,
                 '$lt': end_season_date
             }
         }
-        return end_season_date
+        return end_season_date      # 返回季度最后的日期给halfyear使用
 
-    def do_halfYear(self):
+    def do_halfyear(self):
         start_date = datetime.datetime.strptime("{year}-{month}-{day}".format(**self.args), "%Y-%m-%d")
         end_season_date_1 = self.do_season()
         current_month_days = calendar.monthrange(end_season_date_1.year, end_season_date_1.month)[1]
         current_month_remain_days = current_month_days - end_season_date_1.day
         next_month_1 = end_season_date_1 + datetime.timedelta(days=current_month_remain_days) + datetime.timedelta(days=self.get_next_month_days(end_season_date_1))
         next_month_2 = next_month_1 + datetime.timedelta(days=self.get_next_month_days(next_month_1))
-        harf_year_date = next_month_2 + datetime.timedelta(days=start_date.day)
+        harf_year_date = next_month_2 + datetime.timedelta(days=start_date.day) + datetime.timedelta(days=1)
         self.filter_rule[1]["$match"] = {
             'data.date': {
                 '$gte': start_date,
@@ -198,12 +220,12 @@ def get_args():
     命令行参数
     """
     arg = argparse.ArgumentParser(prog="Split_collection", usage='%(prog)s filter [options]')
-    arg.add_argument("filter", type=str, choices=["year", "month", "week", "season", "halfYear"], help="filter name")
+    arg.add_argument("filter", type=str, choices=["year", "month", "week", "season", "halfyear", "all"], help="filter name")
     arg.add_argument("--host", type=str, help="DB host, default=%(default)s", default="10.15.101.63")
     arg.add_argument("--port", type=int, help="DB port, default=%(default)s", default=27027)
     arg.add_argument("--db", type=str, help="DB name, default=%(default)s", default="blockchain_test")
     arg.add_argument("-r", "--read", type=str, help="read collection name")
-    arg.add_argument("-w", "--write", type=str, help="write collection name")
+    # arg.add_argument("-w", "--write", type=str, help="write collection name")
     arg.add_argument("--year", type=int, help="year", required=True)
     arg.add_argument("--month", type=int, help="month")
     arg.add_argument("--day", type=int, help="day")
@@ -211,6 +233,9 @@ def get_args():
 
 
 if __name__ == "__main__":
-    args = vars(get_args().parse_args())
-    opt = SplitDB(args=args)
-    data = opt.run()
+    try:
+        args = vars(get_args().parse_args())
+        opt = SplitDB(args=args)
+        data = opt.run()
+    except Exception as e:
+        print('Error: {}'.format(e))
