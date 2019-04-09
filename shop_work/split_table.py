@@ -47,27 +47,37 @@ class SplitDB(object):
         }
     }, {
         '$project': {
+            'storeId': '$_id',
+            'sum': '$sum',
+            'count': '$count',
+            'data0': {
+                '$arrayElemAt': [
+                    '$data', 0
+                ]
+            }
+        }
+    }, {
+        '$project': {
             '_id': 0,
             'avg_sum': {
                 '$divide': [
                     '$sum', '$count'
                 ]
             },
-            'storeId': '$data.storeId',
-            'accountname': '$data.accountname',
-            'storename': '$data.storename',
-            # 'date': '$data.date',
+            'storeId': '$_id',
+            'accountname': '$data0.accountname',
+            'storename': '$data0.storename',
             'sum': '$sum',
             'count': '$count',
-            'fulladdress': '$data.fulladdress',
-            'province': '$data.province',
-            'city': '$data.city',
-            'district': '$data.district',
-            'zone': '$data.zone',
-            'telephone': '$data.telephone',
-            'cellphone': '$data.cellphone',
-            'longitude': '$data.longitude',
-            'latitude': '$data.latitude'
+            'fulladdress': '$data0.fulladdress',
+            'province': '$data0.province',
+            'city': '$dat0.city',
+            'district': '$data0.district',
+            'zone': '$data0.zone',
+            'telephone': '$data0.telephone',
+            'cellphone': '$data0.cellphone',
+            'longitude': '$data0.longitude',
+            'latitude': '$data0.latitude'
         }
     }
     ]
@@ -86,7 +96,7 @@ class SplitDB(object):
         self.db = self.conn[self.args["db"]]
         self.write_table = self.db[self.args["write"]]
         self.read_table = self.db[self.args["read"]]
-        # self.filter_rule.append({"$out": self.args["write"]})
+        self.filter_rule.append({"$out": self.args["write"]})
 
     def insert_many(self):
         result = self.get_data()
@@ -104,17 +114,7 @@ class SplitDB(object):
         if not isinstance(self.filter_rule, list):
             sys.exit(1)
         cursor = self.read_table.aggregate(self.filter_rule)
-        result_list = [x for x in cursor]
-        result = []
-        for item in result_list:
-            d = {}
-            for key, value in item.items():
-                if isinstance(value, list):
-                    value = value[0]
-                d[key] = value
-            result.append(d)
         cursor.close()
-        return result
 
     def do_year(self):
         self.filter_rule[1]["$match"] = {
@@ -178,7 +178,7 @@ class SplitDB(object):
         self.filter_rule = self.filter_rule.append({"$out": self.args["write"]})
 
     def run(self):
-        return getattr(self, "insert_many", self.echo)()
+        return getattr(self, "get_data", self.echo)()
 
     @staticmethod
     def echo():
