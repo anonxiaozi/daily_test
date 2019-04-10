@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 # @Time: 2019/3/22
-# @File: first
+# @File: record_shop
 
 import re
 import pymongo
 import os
 import datetime
+import argparse
+import sys
 
 
 class OptMongodb(object):
 
     def __init__(self, **kwargs):
         self.args = kwargs["args"]
-        self.conn = pymongo.MongoClient(self.args["host"], self.args["port"])
+        self.conn = pymongo.MongoClient(self.args["host"], self.args["port"], socketTimeoutMS=2000)
         self.db = self.conn[self.args["db"]]
         self.collection = self.db[self.args["collection"]]
         # self.conn = pymongo.MongoClient(
@@ -132,13 +134,30 @@ class OptCSV(OptMongodb):
             f.close()
 
 
+def get_args():
+    """
+    命令行参数
+    """
+    arg = argparse.ArgumentParser(prog="Record_Shop", usage='%(prog)s filter [options]')
+    arg.add_argument("--host", type=str, help="DB host, default=%(default)s", default="10.15.101.63")
+    arg.add_argument("--port", type=int, help="DB port, default=%(default)s", default=27027)
+    arg.add_argument("--db", type=str, help="DB name, default=%(default)s", default="blockchain_test")
+    arg.add_argument("--collection", type=str, help="Record collection name, default=%(default)s", default="LocationFromWeb")
+    arg.add_argument("--filename", type=str, help="Source file name", required=True)
+    return arg
+
+
 if __name__ == "__main__":
-    args = {
-        "host": "10.15.101.63",
-        "port": 27027,
-        "db": "blockchain_test",
-        "collection": "LocationFromWeb",
-        "filename": "out0228-0231.csv"
-    }
-    opt = OptCSV(args=args)
-    opt.run()
+    # args = {
+    #     "host": "10.15.101.63",
+    #     "port": 27027,
+    #     "db": "blockchain_test",
+    #     "collection": "LocationFromWeb",
+    #     "filename": "out0228-0231.csv"
+    # }
+    try:
+        args = vars(get_args().parse_args())
+        opt = OptCSV(args=args)
+        opt.run()
+    except Exception as e:
+        print("Error: {}".format(str(e)))
