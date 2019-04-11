@@ -4,10 +4,7 @@
 
 import re
 import pymongo
-import os
-import datetime
 import argparse
-import sys
 
 
 class OptMongodb(object):
@@ -46,7 +43,8 @@ class OptMongodb(object):
 class OptCSV(OptMongodb):
 
     def __init__(self, **kwargs):
-        self.match_info = re.compile(r"\n?(\d{18}),(.+?),(.+?)\s(\S+?)\s+?，(\+?\d?\d?\??\d+?\-?\s?\??\d+?\??\-?\s?\d+?\??),下单时间：(.*)")
+        self.match_info = re.compile(r"\n?(\d{18}),(.+?),(.+?)\s(\S+?)\s+?，\??\??(\+?\d?\d?\??\d+?\-?\s?\??\d+?\??\-?\s?\d+?)\??\??\D{0,20},下单时间：(.*)")
+        self.match_info_no_phone = re.compile(r"\n?(\d{18}),(.+?),(.+?)\s(\S+?)\s+?，(.+?),下单时间：(.*)")   # 匹配不到电话号码，直接将电话位置的数据充当电话号码
         self.args = kwargs["args"]
         self.illegal_data = {"illegal": [], "exists": []}
         self.result = {}
@@ -56,12 +54,17 @@ class OptCSV(OptMongodb):
     def read_fake_csv(self):
         with open(self.args["filename"], "r", encoding="utf-8") as f:
             for line in f.readlines():
+                if not line.strip(): continue   # 排除空行
                 self.num += 1
                 result = self.match_info.findall(line)
                 if result:
                     self.result[result[0][0]] = result[:]
                 else:
-                    self.illegal_data["illegal"].append(line)
+                    result_not_phone = self.match_info_no_phone.findall(line)
+                    if result_not_phone:
+                        self.result[result_not_phone[0][0]] = result_not_phone[:]
+                    else:
+                        self.illegal_data["illegal"].append(line)
 
     def path_diff_info(self):
         """
@@ -92,7 +95,7 @@ class OptCSV(OptMongodb):
                     "Name": x[0][3],
                     "Cellphone": x[0][4],
                     "OrderTime": x[0][5]
-                } for x in data[n:n+2000]
+                } for x in data[n:n+2000] if x
             ]
             self.insert_many(data2k)
             n += 2000
@@ -127,8 +130,8 @@ class OptCSV(OptMongodb):
                 for illegal in self.illegal_data["illegal"]:
                     f.write(illegal + "\n")
             insert_num = len(self.result)   # 写入DB的数据number
-            final_result = "Total {} data | Insert {} data | Illegal data: {} | Exists data: {} | Record rate: {:.2%}"\
-                .format(self.num, insert_num, len(self.illegal_data["illegal"]), len(self.illegal_data["exists"]), insert_num/self.num)
+            final_result = "Total {} data | Duplicate num: {} | Insert {} data | Illegal data: {} | Exists data: {} | Record rate: {:.2%}"\
+                .format(self.num, (self.num - len(self.result)), insert_num, len(self.illegal_data["illegal"]), len(self.illegal_data["exists"]), insert_num/len(self.result))
             f.write(final_result + "\n\n")
             print(final_result)
             f.close()
@@ -148,13 +151,6 @@ def get_args():
 
 
 if __name__ == "__main__":
-    # args = {
-    #     "host": "10.15.101.63",
-    #     "port": 27027,
-    #     "db": "blockchain_test",
-    #     "collection": "LocationFromWeb",
-    #     "filename": "out0228-0231.csv"
-    # }
     try:
         args = vars(get_args().parse_args())
         opt = OptCSV(args=args)
