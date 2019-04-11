@@ -96,52 +96,41 @@ class SplitDB(object):
         date = self.args["dateRange"]
         try:
             split_data = date.split("-")
-            if len(split_data) == 1:
-                self.real_start_time = datetime.datetime.strptime(split_data[0], "%Y%m%d")
-                self.real_end_time = self.real_start_time + datetime.timedelta(days=1)
-            else:
+            if len(split_data) == 2:
                 self.real_start_time, self.real_end_time = datetime.datetime.strptime(split_data[0], "%Y%m%d"), datetime.datetime.strptime(split_data[1], "%Y%m%d")
-            self.diff_day = (self.real_end_time - self.real_start_time).days
-            self.real_start_month_num, self.real_start_year_num = self.real_start_time.month, self.real_start_time.year
-            self.real_end_month_num, self.real_end_year_num = self.real_end_time.month, self.real_end_time.year
-            # week
-            self.start_week_time = self.real_start_time - datetime.timedelta(days=self.real_start_time.weekday()) - datetime.timedelta(weeks=1)
-            self.end_week_time = self.real_end_time - datetime.timedelta(days=self.real_end_time.weekday()) - datetime.timedelta(weeks=1)
-            # month
-            if self.real_start_month_num == 1:
-                self.start_month_time = self.real_start_time - datetime.timedelta(days=self.real_start_time.day - 1) - datetime.timedelta(days=calendar.monthrange(self.real_start_year_num - 1, 12)[1])
+                self.diff_day = (self.real_end_time - self.real_start_time).days
+                self.real_start_month_num, self.real_start_year_num = self.real_start_time.month, self.real_start_time.year
+                self.real_end_month_num, self.real_end_year_num = self.real_end_time.month, self.real_end_time.year
+                # week
+                self.start_week_time = self.real_start_time - datetime.timedelta(days=self.real_start_time.weekday())
+                self.end_week_time = self.real_end_time + datetime.timedelta(days=(7 - self.real_end_time.weekday()))
+                # month
+                self.start_month_time = self.real_start_time - datetime.timedelta(days=self.real_start_time.day-1)
+                self.end_month_time = self.real_end_time + datetime.timedelta(days=(calendar.monthrange(self.real_end_year_num, self.real_end_month_num)[1] - self.real_end_time.day + 1))
+                # season
+                for season, months in self.season_dict.items():
+                    if self.real_start_month_num in months:
+                        self.season_num = season
+                        self.start_season_time = datetime.datetime.strptime("{}{}{}".format(self.real_start_year_num, months[0], 1), "%Y%m%d")
+                        self.end_season_time = datetime.datetime.strptime("{}{}{}".format(self.real_end_year_num, months[-1], calendar.monthrange(self.real_end_year_num, months[-1])[1]), "%Y%m%d")
+                        break
+                # year
+                self.start_year_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num), "%Y%m%d")
+                self.end_year_time = datetime.datetime.strptime("{}12{}".format(self.real_end_year_num, calendar.monthrange(self.real_end_year_num, 12)[1]), "%Y%m%d")
+                # halfyear
+                if self.real_start_month_num > 6:
+                    self.start_halfyear_time = datetime.datetime.strptime("{}0701".format(self.real_start_year_num), "%Y%m%d")
+                else:
+                    self.start_halfyear_time = self.start_year_time
+                if self.real_end_month_num > 6:
+                    self.end_halfyear_time = self.end_year_time
+                else:
+                    self.end_halfyear_time = datetime.datetime.strptime("{}6{}".format(self.real_end_year_num, calendar.monthrange(self.real_end_year_num, 6)[1]), "%Y%m%d")
+
+                return True
             else:
-                self.start_month_time = self.real_start_time - datetime.timedelta(days=self.real_start_time.day - 1) - datetime.timedelta(days=calendar.monthrange(self.real_start_year_num, self.real_start_month_num - 1)[1])
-            if self.real_end_month_num == 1:
-                self.end_month_time = datetime.datetime.strptime("{}{}{}".format(self.real_start_year_num - 1, 12, calendar.monthrange(self.real_end_year_num - 1, 12)[1]), "%Y%m%d")
-            else:
-                self.end_month_time = self.real_end_time - datetime.timedelta(days=self.real_end_time.day)
-            # season
-            for season, months in self.season_dict.items():
-                if self.real_start_month_num in months:
-                    self.season_num = season
-                    if season == 0:
-                        self.start_season_time = datetime.datetime.strptime("{}{}{}".format(self.real_start_year_num - 1, self.season_dict[3][0], 1), "%Y%m%d")
-                    else:
-                        self.start_season_time = datetime.datetime.strptime("{}{}{}".format(self.real_start_year_num, self.season_dict[season - 1][0], 1), "%Y%m%d")
-                if self.real_end_month_num in months:
-                    if season == 0:
-                        self.end_season_time = datetime.datetime.strptime("{}{}{}".format(self.real_end_year_num - 1, self.season_dict[3][-1], calendar.monthrange(self.real_end_year_num - 1, self.season_dict[3][-1])[1]), "%Y%m%d")
-                    else:
-                        self.end_season_time = datetime.datetime.strptime("{}{}{}".format(self.real_end_year_num, self.season_dict[season - 1][-1], calendar.monthrange(self.real_end_year_num, self.season_dict[season - 1][-1])[1]), "%Y%m%d")
-            # year
-            self.start_year_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num - 1), "%Y%m%d")
-            self.end_year_time = datetime.datetime.strptime("{}12{}".format(self.real_end_year_num - 1, calendar.monthrange(self.real_end_year_num, 12)[1]), "%Y%m%d")
-            # halfyear
-            if self.real_start_month_num > 6:
-                self.start_halfyear_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num), "%Y%m%d")
-            else:
-                self.start_halfyear_time = datetime.datetime.strptime("{}0701".format(self.real_start_year_num - 1), "%Y%m%d")
-            if self.real_end_month_num > 6:
-                self.end_halfyear_time = datetime.datetime.strptime("{}06{}".format(self.real_end_year_num, calendar.monthrange(self.real_start_year_num, 6)[1]), "%Y%m%d")
-            else:
-                self.end_halfyear_time = datetime.datetime.strptime("{}12{}".format(self.real_end_year_num - 1, calendar.monthrange(self.real_end_year_num - 1, 12)[1]), "%Y%m%d")
-            return True
+                print("Increment Date Error: {}".format(date))
+                return False
         except Exception as err:
             print("Increment Date Error: {}".format(str(err)))
             return False
@@ -244,7 +233,7 @@ class SplitDB(object):
 
     def do_all(self):
         del(self.filter_rule[0])
-        write_table_name = "cache_{}_{}".format("all", 19700101)
+        write_table_name = "cache_{}_{}".format("all", self.real_start_time.strftime("%Y%m%d"))
         self.filter_rule[-1]["$out"] = write_table_name
         self.aggregate_and_index(write_table_name)
 
