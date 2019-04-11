@@ -54,7 +54,7 @@ class OptCSV(OptMongodb):
         super().__init__(args=kwargs["args"])
 
     def read_fake_csv(self):
-        with open(os.path.join("csv_data", self.args["filename"]), "r", encoding="utf-8") as f:
+        with open(self.args["filename"], "r", encoding="utf-8") as f:
             for line in f.readlines():
                 self.num += 1
                 result = self.match_info.findall(line)
@@ -115,10 +115,10 @@ class OptCSV(OptMongodb):
         self.record_data()      # 写入DB
         if self.illegal_data:   # 打印未写入DB的数据
             f = open("result", "a", encoding="utf-8")
-            f.write("{} [ {} ]".format(str(datetime.datetime.now()), self.args["filename"]).center(50, "*") + "\n")
-            illegal_data = "Illegal Data".center(50, "=")
-            f.write(illegal_data + "\n")
-            print(illegal_data)
+            # f.write("{} [ {} ]".format(str(datetime.datetime.now()), self.args["filename"]).center(50, "*") + "\n")
+            # illegal_data = "Illegal Data".center(50, "=")
+            # f.write(illegal_data + "\n")
+            # print(illegal_data)
             for key, value in self.illegal_data.items():
                 for sub_value in value:
                     d = key + ":" + str(sub_value)
@@ -129,7 +129,7 @@ class OptCSV(OptMongodb):
             insert_num = len(self.result)   # 写入DB的数据number
             final_result = "Total {} data | Insert {} data | Illegal data: {} | Exists data: {} | Record rate: {:.2%}"\
                 .format(self.num, insert_num, len(self.illegal_data["illegal"]), len(self.illegal_data["exists"]), insert_num/self.num)
-            f.write(final_result + "\n")
+            f.write(final_result + "\n\n")
             print(final_result)
             f.close()
 
