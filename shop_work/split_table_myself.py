@@ -53,6 +53,7 @@ class SplitDB(object):
             },
             'storeId': '$_id',
             'accountname': '$data0.accountname',
+            'name': '$data0.name',
             'storename': '$data0.storename',
             'sum': '$sum',
             'count': '$count',
