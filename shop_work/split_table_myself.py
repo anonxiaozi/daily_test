@@ -58,7 +58,7 @@ class SplitDB(object):
             'count': '$count',
             'fulladdress': '$data0.fulladdress',
             'province': '$data0.province',
-            'city': '$dat0.city',
+            'city': '$data0.city',
             'district': '$data0.district',
             'zone': '$data0.zone',
             'telephone': '$data0.telephone',

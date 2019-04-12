@@ -130,8 +130,9 @@ class OptCSV(OptMongodb):
                 for illegal in self.illegal_data["illegal"]:
                     f.write(illegal + "\n")
             insert_num = len(self.result)   # 写入DB的数据number
+            record_rate = insert_num/len(self.result) if len(self.result) != 0 else "0.00%"
             final_result = "Total {} data | Duplicate num: {} | Insert {} data | Illegal data: {} | Exists data: {} | Record rate: {:.2%}"\
-                .format(self.num, (self.num - len(self.result)), insert_num, len(self.illegal_data["illegal"]), len(self.illegal_data["exists"]), insert_num/len(self.result))
+                .format(self.num, (self.num - len(self.result)), insert_num, len(self.illegal_data["illegal"]), len(self.illegal_data["exists"]), record_rate)
             f.write(final_result + "\n\n")
             print(final_result)
             f.close()
