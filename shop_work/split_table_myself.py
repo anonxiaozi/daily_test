@@ -133,14 +133,8 @@ class SplitDB(object):
             self.start_year_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num - 1), "%Y%m%d")
             self.end_year_time = datetime.datetime.strptime("{}12{}".format(self.real_end_year_num - 1, calendar.monthrange(self.real_end_year_num, 12)[1]), "%Y%m%d")
             # halfyear
-            if self.real_start_month_num > 6:
-                self.start_halfyear_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num), "%Y%m%d")
-            else:
-                self.start_halfyear_time = datetime.datetime.strptime("{}0701".format(self.real_start_year_num - 1), "%Y%m%d")
-            if self.real_end_month_num > 6:
-                self.end_halfyear_time = datetime.datetime.strptime("{}06{}".format(self.real_end_year_num, calendar.monthrange(self.real_start_year_num, 6)[1]), "%Y%m%d")
-            else:
-                self.end_halfyear_time = datetime.datetime.strptime("{}12{}".format(self.real_end_year_num - 1, calendar.monthrange(self.real_end_year_num - 1, 12)[1]), "%Y%m%d")
+            self.start_halfyear_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num), "%Y%m%d")
+            self.end_halfyear_time = datetime.datetime.strptime("{}0701".format(self.real_start_year_num), "%Y%m%d")
             return True
         except Exception as err:
             print("Increment Date Error: {}".format(str(err)))
@@ -230,7 +224,7 @@ class SplitDB(object):
                 e = datetime.datetime.strptime("{}6{}".format(s.year, calendar.monthrange(s.year, 6)[1]), "%Y%m%d") + datetime.timedelta(days=1)
             self.change_filter(s, e, "halfyear")
             s = e
-            if s > self.end_halfyear_time:
+            if s >= self.end_halfyear_time:
                 break
 
     def do_year(self):
@@ -239,7 +233,7 @@ class SplitDB(object):
             e = datetime.datetime.strptime("{}12{}".format(s.year, calendar.monthrange(s.year, 12)[1]), "%Y%m%d") + datetime.timedelta(days=1)
             self.change_filter(s, e, "year")
             s = e
-            if s > self.end_year_time:
+            if s >= self.end_year_time:
                 break
 
     def do_all(self):

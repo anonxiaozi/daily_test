@@ -118,15 +118,8 @@ class SplitDB(object):
                 self.start_year_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num), "%Y%m%d")
                 self.end_year_time = datetime.datetime.strptime("{}12{}".format(self.real_end_year_num, calendar.monthrange(self.real_end_year_num, 12)[1]), "%Y%m%d")
                 # halfyear
-                if self.real_start_month_num > 6:
-                    self.start_halfyear_time = datetime.datetime.strptime("{}0701".format(self.real_start_year_num), "%Y%m%d")
-                else:
-                    self.start_halfyear_time = self.start_year_time
-                if self.real_end_month_num > 6:
-                    self.end_halfyear_time = self.end_year_time
-                else:
-                    self.end_halfyear_time = datetime.datetime.strptime("{}6{}".format(self.real_end_year_num, calendar.monthrange(self.real_end_year_num, 6)[1]), "%Y%m%d")
-
+                self.start_halfyear_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num), "%Y%m%d")
+                self.end_halfyear_time = datetime.datetime.strptime("{}0701".format(self.real_start_year_num), "%Y%m%d")
                 return True
             else:
                 print("Increment Date Error: {}".format(date))
