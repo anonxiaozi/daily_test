@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Time: 2019/4/11
-# @File: batch_record_shop
+# @File: recursive_record_shop
 
 import os
 import re

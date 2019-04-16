@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Time: 2019/4/10
-# @File: split_table_myself
+# @File: split_table_date
 
 import pymongo
 import datetime
@@ -131,8 +131,8 @@ class SplitDB(object):
                     else:
                         self.end_season_time = datetime.datetime.strptime("{}{}{}".format(self.real_end_year_num, self.season_dict[season - 1][-1], calendar.monthrange(self.real_end_year_num, self.season_dict[season - 1][-1])[1]), "%Y%m%d")
             # year
-            self.start_year_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num - 1), "%Y%m%d")
-            self.end_year_time = datetime.datetime.strptime("{}12{}".format(self.real_end_year_num - 1, calendar.monthrange(self.real_end_year_num, 12)[1]), "%Y%m%d")
+            self.start_year_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num), "%Y%m%d")
+            self.end_year_time = datetime.datetime.strptime("{}12{}".format(self.real_end_year_num, calendar.monthrange(self.real_end_year_num, 12)[1]), "%Y%m%d")
             # halfyear
             self.start_halfyear_time = datetime.datetime.strptime("{}0101".format(self.real_start_year_num), "%Y%m%d")
             self.end_halfyear_time = datetime.datetime.strptime("{}0701".format(self.real_start_year_num), "%Y%m%d")
