@@ -151,7 +151,6 @@ class OptMongodb(object):
         result, national_data = self.handle_data()
         data = []
         product_data = []  # 存放所有的title数据
-        company_data = []   # 存放所有的company数据
         title_full = []
         for addr, addr_info in result.items():
             sub_data = {}
@@ -169,34 +168,29 @@ class OptMongodb(object):
             title_list = sub_data['title_info']
             company_list = sub_data['company_info']
             title_result = sorted(title_list, key=lambda x: x['title_sum'], reverse=True)
-            d = copy.deepcopy(title_result[:10])
-            sub_data['title_info'] = sorted(d, key=lambda x: x['title_sum'], reverse=True)
+            sub_data['title_info'] = copy.deepcopy(title_result[:10])
             for n, item in enumerate(title_result):
                 item['address'] = addr
                 item['rank'] = n
                 item['avg_sum'] = item['title_sum'] / item['title_num']
                 sub_product_data.append(item)
-            for item in company_list:
-                item['address'] = addr
             company_result = sorted(company_list, key=lambda x: x['company_sum'], reverse=True)
             sub_data['company_info'] = company_result
             data.append(sub_data)
-            company_data.extend(company_result)
             product_data.extend(sub_product_data)
 
         national_data_b_info = national_data['title_info']
         national_data_b_company = national_data['company_info']
         national_data_title_info, national_data_company_info = [], []
         for title, title_info in national_data_b_info.items():
-            national_data_title_info.append({'title_name': title, 'title_sum': title_info['sum'], 'title_num': title_info['num'], 'company': title_info['company']})
-        national_data_title_info = sorted(national_data_title_info, key=lambda x:x['title_sum'], reverse=True)
+            national_data_title_info.append({'title_name': title, 'title_sum': title_info['sum'], 'title_num': title_info['num']})
+        national_data_title_info = sorted(national_data_title_info, key=lambda x:x['title_num'], reverse=True)
         for company, company_info in national_data_b_company.items():
-            national_data_company_info.append({'company_name': company, 'company_sum': company_info['sum'], 'company_num': company_info['num'], 'avg_sum': (company_info['sum'] / company_info['num']), 'address': '全国'})
+            national_data_company_info.append({'company_name': company, 'company_sum': company_info['sum'], 'company_num': company_info['num'], 'avg_sum': (company_info['sum'] / company_info['num'])})
         national_data_company_info = sorted(national_data_company_info, key=lambda x:x['company_sum'], reverse=True)
-        national_data['title_info'] = sorted(copy.deepcopy(national_data_title_info[:10]), key=lambda x:x['title_sum'], reverse=True)
+        national_data['title_info'] = copy.deepcopy(national_data_title_info[:10])
         national_data['company_info'] = national_data_company_info
 
-        company_data.extend(national_data_company_info)
         data.append(national_data)
         for n, item in enumerate(national_data_title_info):
             item['address'] = '全国'
@@ -205,28 +199,21 @@ class OptMongodb(object):
             product_data.append(item)
         rank_table_name = self.args["collection"] + '_rank'
         product_rank_table_name = self.args["collection"] + '_product_rank'
-        company_rank_table_name = self.args["collection"] + '_company_rank'
-        self.db[rank_table_name].drop()
-        self.db[product_rank_table_name].drop()
-        self.db[company_rank_table_name].drop()
         self.do_write(rank_table_name, data)
         self.do_write(product_rank_table_name, product_data)
-        self.do_write(company_rank_table_name, company_data)
         self.db[product_rank_table_name].create_index('address', name='address_idx')
         self.db[product_rank_table_name].create_index('title_name', name='title_name_idx')
-        self.db[company_rank_table_name].create_index('address', name='address_idx')
-        self.db[company_rank_table_name].create_index('company_name', name='company_name_idx')
 
     def do_write(self, collection, data):
         """
         写入数据库，一次写入2k条
         """
+        self.db[collection].drop()
         n = 0
         while n < len(data):
             data2w = data[n:n+20000]
             self.db[collection].insert_many(data2w)
             n += 20000
-        print('write table {} completed.'.format(collection))
 
 
 def get_args():
