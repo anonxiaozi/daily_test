@@ -219,7 +219,7 @@ class OptMongodb(object):
 
     def do_write(self, collection, data):
         """
-        写入数据库，一次写入2k条
+        写入数据库，一次写入20k条
         """
         n = 0
         while n < len(data):

@@ -25,8 +25,9 @@ class SplitDB(object):
             'sum': {
                 '$sum': '$sum'
             },
+
             'count': {
-                '$sum': 1
+                '$sum': '$count'
             },
             'data': {
                 '$push': '$$ROOT'
@@ -174,6 +175,7 @@ class SplitDB(object):
             ('zone', pymongo.ASCENDING)
         ], name='province_city_district_zone_idx')
         self.db[write_table_name].create_indexes([count_idx, num_idx, storeId_idx, avg_sum_idx, province_idx, province_city_idx, province_city_district_idx, province_city_district_zone_idx])
+        print('write table {} completed.'.format(write_table_name))
 
     def change_filter(self, s_time, e_time, filter):
         self.filter_rule[0]["$match"] = {
