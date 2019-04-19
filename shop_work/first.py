@@ -14,23 +14,12 @@ class OptMongodb(object):
         self.conn = pymongo.MongoClient(self.args["host"], self.args["port"])
         self.db = self.conn[self.args["db"]]
         self.collection = self.db[self.args["collection"]]
-        # self.conn = pymongo.MongoClient(
-        #     self.kwargs["host"],
-        #     self.kwargs["port"],
-        #     username=self.kwargs["user"],
-        #     password=self.kwargs["password"],
-        #     authSource=self.kwargs["db"],
-        #     authMechanism=self.kwargs["SCRAM-SHA-256"]
-        # )
 
     def get_data(self):
-        same_filter = [
+        match_filter = [
             {
-                '$lookup': {
-                    'from': 'LocationFromWeb',
-                    'localField': 'serialID',
-                    'foreignField': 'SerialID',
-                    'as': 'data'
+                '$match': {
+                    'match': True
                 }
             }, {
                 '$group': {
@@ -45,16 +34,14 @@ class OptMongodb(object):
                 }
             }
         ]
-        # full_data = self.collection.aggregate(full_filter, allowDiskUse=True)
-        cursor = self.collection.aggregate(same_filter, allowDiskUse=True)
-        data = [json.loads(json_util.dumps(x)) for x in cursor if not x['data']]
-        # full_list = [x['_id'] for x in full_data]
-        # same_list = [x['_id'] for x in same_data if x['data']]
-        # print(len(full_list))
-        # print(len(same_list))
-        # diff_list = list(set(full_list).difference(set(same_list)))
-        # return diff_list
-        return data
+        match_cursor = self.collection.aggregate(match_filter, allowDiskUse=True)
+        full_cursor = self.collection.aggregate(full_filter, allowDiskUse=True)
+        match_data = [json_util.dumps(x) for x in match_cursor]
+        full_data = [json_util.dumps(x) for x in full_cursor]
+        match_data = [json.loads(x)['_id']['$binary'] for x in match_data]
+        full_data = [json.loads(x)['_id']['$binary'] for x in full_data]
+        dismatch_data = list(set(full_data).difference(set(match_data)))
+        return dismatch_data
 
     def run(self):
         data = self.get_data()
