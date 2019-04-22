@@ -7,6 +7,9 @@ import datetime
 import sys
 import calendar
 import argparse
+import os
+from bson import json_util
+from pymongo import errors
 
 
 class SplitDB(object):
@@ -68,9 +71,10 @@ class SplitDB(object):
             'longitude': '$data0.longitude',
             'latitude': '$data0.latitude'
         }
-    }, {
-        '$out': ''
-    }
+    },
+    # {
+    #     '$out': ''
+    # }
     ]
     season_dict = {
         0: [1,2,3],
@@ -90,9 +94,12 @@ class SplitDB(object):
         #     authSource=self.args["db"],
         #     authMechanism=self.args["SCRAM-SHA-256"]
         # )
-        self.db = self.conn[self.args["db"]]
-        self.read_table = self.db[self.args["read"]]
-        self.get_start_end_date()
+        self.source_db = self.conn[self.args["source_db"]]
+        self.target_db = self.conn[self.args["target_db"]]
+        self.read_table = self.source_db[self.args["read_table"]]
+        self.process_db = self.conn[self.args['process_db']]
+        self.process_tb = self.process_db[self.args['process_tb']]
+        self.result = []
 
     def get_start_end_date(self):
         date = self.args["dateRange"]
@@ -139,23 +146,46 @@ class SplitDB(object):
             self.end_halfyear_time = datetime.datetime.strptime("{}0701".format(self.real_start_year_num), "%Y%m%d")
             return True
         except Exception as err:
-            print("Increment Date Error: {}".format(str(err)))
+            data = "Increment Date Error: {}".format(str(err))
+            self.result.append(data)
             return False
 
     def do_work(self):
-        self.do_week()
-        self.do_month()
-        self.do_season()
-        self.do_year()
-        self.do_halfyear()
-        self.do_all()
+        if not self.get_start_end_date(): return False
+        if not self.do_week(): return False
+        if not self.do_month(): return False
+        if not self.do_season(): return False
+        if not self.do_year(): return False
+        if not self.do_halfyear(): return False
+        if not self.do_all(): return False
+        return True
+
+    def do_write(self, collection, data):
+        """
+        写入数据库，一次写入2w条
+        """
+        self.target_db[collection].drop()
+        n = 0
+        while n < len(data):
+            data2w = data[n:n+20000]
+            self.target_db[collection].insert_many(data2w)
+            n += 20000
 
     def aggregate_and_index(self, write_table_name):
         if not isinstance(self.filter_rule, list):
-            print("Filter Rule Error: {}".format(str(self.filter_rule)))
-            sys.exit(1)
-        cursor = self.read_table.aggregate(self.filter_rule, allowDiskUse=True)
-        cursor.close()
+            data = "Filter Rule Error: {}".format(str(self.filter_rule))
+            self.result.append(data)
+            return False
+        read_cursor = self.read_table.aggregate(self.filter_rule, allowDiskUse=True)
+        data = [x for x in read_cursor]
+        read_cursor.close()
+        try:
+            self.do_write(write_table_name, data)   # 写库
+        except Exception as e:
+            self.result.append("Error: {}".format(e))
+            return False
+        data = 'write table {}/{} completed.'.format(self.args['target_db'], write_table_name)
+        self.result.append(data)
         # 添加Index
         count_idx = pymongo.IndexModel([('count', pymongo.ASCENDING)], name='count_idx')
         num_idx = pymongo.IndexModel([('num', pymongo.ASCENDING)], name='num_idx')
@@ -174,8 +204,10 @@ class SplitDB(object):
             ('district', pymongo.ASCENDING),
             ('zone', pymongo.ASCENDING)
         ], name='province_city_district_zone_idx')
-        self.db[write_table_name].create_indexes([count_idx, num_idx, storeId_idx, avg_sum_idx, province_idx, province_city_idx, province_city_district_idx, province_city_district_zone_idx])
-        print('write table {} completed.'.format(write_table_name))
+        self.target_db[write_table_name].create_indexes([count_idx, num_idx, storeId_idx, avg_sum_idx, province_idx, province_city_idx, province_city_district_idx, province_city_district_zone_idx])
+        idx_data = 'create index {}/{} completed.'.format(self.args['target_db'], write_table_name)
+        self.result.append(idx_data)
+        return True
 
     def change_filter(self, s_time, e_time, filter):
         self.filter_rule[0]["$match"] = {
@@ -185,26 +217,29 @@ class SplitDB(object):
             }
         }
         write_table_name = "cache_{}_{}".format(filter, s_time.strftime("%Y%m%d"))
-        self.filter_rule[-1]["$out"] = write_table_name
-        self.aggregate_and_index(write_table_name)
+        return self.aggregate_and_index(write_table_name)
 
     def do_week(self):
         s = self.start_week_time
         while True:
             e = s + datetime.timedelta(weeks=1)
-            self.change_filter(s, e, "week")
+            if not self.change_filter(s, e, "week"):
+                return False
             s = e
             if s >= self.end_week_time:
                 break
+        return True
 
     def do_month(self):
         s = self.start_month_time
         while True:
             e = s + datetime.timedelta(days=calendar.monthrange(s.year, s.month)[1])
-            self.change_filter(s, e, "month")
+            if not self.change_filter(s, e, "month"):
+                return False
             s = e
             if s >= self.end_month_time:
                 break
+        return True
 
     def do_season(self):
         s = self.start_season_time
@@ -212,11 +247,13 @@ class SplitDB(object):
             for season, months in self.season_dict.items():
                 if s.month in months:
                     e = datetime.datetime.strptime("{}{}{}".format(s.year, months[-1], calendar.monthrange(s.year, months[-1])[1]), "%Y%m%d") + datetime.timedelta(days=1)
-                    self.change_filter(s, e, "season")
+                    if not self.change_filter(s, e, "season"):
+                        return False
                     s = e
                     break
             if s >= self.end_season_time:
                 break
+        return True
 
     def do_halfyear(self):
         s = self.start_halfyear_time
@@ -225,51 +262,61 @@ class SplitDB(object):
                 e = datetime.datetime.strptime("{}12{}".format(s.year, calendar.monthrange(s.year, 12)[1]), "%Y%m%d") + datetime.timedelta(days=1)
             else:
                 e = datetime.datetime.strptime("{}6{}".format(s.year, calendar.monthrange(s.year, 6)[1]), "%Y%m%d") + datetime.timedelta(days=1)
-            self.change_filter(s, e, "halfyear")
+            if not self.change_filter(s, e, "halfyear"):
+                return False
             s = e
             if s >= self.end_halfyear_time:
                 break
+        return True
 
     def do_year(self):
         s = self.start_year_time
         while True:
             e = datetime.datetime.strptime("{}12{}".format(s.year, calendar.monthrange(s.year, 12)[1]), "%Y%m%d") + datetime.timedelta(days=1)
-            self.change_filter(s, e, "year")
+            if not self.change_filter(s, e, "year"):
+                return False
             s = e
             if s >= self.end_year_time:
                 break
+        return True
 
     def do_all(self):
         del(self.filter_rule[0])
         write_table_name = "cache_{}_{}".format("all", 19700101)
-        self.filter_rule[-1]["$out"] = write_table_name
-        self.aggregate_and_index(write_table_name)
-
-    # def insert_many(self):
-    #     result = self.get_data()
-    #     try:
-    #         self.write_table.insert_many(result)
-    #     except Exception as e:
-    #         print("Error: {}.".format(e))
+        return self.aggregate_and_index(write_table_name)
 
 
 def get_args():
     """
     命令行参数
     """
-    arg = argparse.ArgumentParser(prog="Split_collection", usage='%(prog)s filter [options]')
-    arg.add_argument("--host", type=str, help="DB host, default=%(default)s", default="10.15.101.63")
-    arg.add_argument("--port", type=int, help="DB port, default=%(default)s", default=27027)
-    arg.add_argument("--db", type=str, help="DB name, default=%(default)s", default="blockchain_test")
-    arg.add_argument("-r", "--read", type=str, help="read collection name")
-    arg.add_argument("-d", "--dateRange", type=str, help="Date Range, such as: '20181112-20190410'", required=True)
+    arg = argparse.ArgumentParser(prog=os.path.basename(__file__), usage='%(prog)s filter [options]')
+    arg.add_argument("-H", "--host", type=str, help="DB host, default=%(default)s", default="10.15.101.63")
+    arg.add_argument("-p", "--port", type=int, help="DB port, default=%(default)s", default=27027)
+    arg.add_argument("-s", "--source_db", type=str, help="DB name, default=%(default)s", default="test")
+    arg.add_argument("-t", "--target_db", type=str, help="DB name, default=%(default)s", default="test01")
+    arg.add_argument("-r", "--read_table", type=str, help="read collection name, default=%(default)s", default="StoreTransaction_hash")
+    arg.add_argument("-d", "--dateRange", type=str, help="Date Range, such as: \"20181112-20190410\"", required=True)
+    arg.add_argument("--process_db", type=str, help="Execution status record database, default: %(default)s", default="process")
+    arg.add_argument("--process_tb", type=str, help="Execution status record collection, default: %(default)s", default="ProcessStatus")
     return arg
 
 
 if __name__ == "__main__":
+    args = vars(get_args().parse_args())
+    opt = SplitDB(args=args)
+    py_name = os.path.basename(__file__)
     try:
-        args = vars(get_args().parse_args())
-        opt = SplitDB(args=args)
-        opt.do_work()
+        opt.process_tb.insert_one({'_id': py_name, 'status': 0, 'desc': '', 'updated_at': datetime.datetime.now()})
+    except pymongo.errors.DuplicateKeyError:
+        opt.process_tb.update_one({'_id': py_name}, {'$set': {'status': 0, 'desc': '', 'updated_at': datetime.datetime.now()}})
+    try:
+        result = opt.do_work()
+        if not result:
+            opt.process_tb.update_one({'_id': py_name}, {'$set': {'status': 2, 'desc': ', '.join(opt.result), 'updated_at': datetime.datetime.now()}})
+            sys.exit(2)
     except Exception as e:
-        print('Error: {}'.format(e))
+        opt.result.append('Error: {}'.format(e))
+        opt.process_tb.update_one({'_id': py_name}, {'$set': {'status': 2, 'desc': ', '.join(opt.result), 'updated_at': datetime.datetime.now()}})
+        sys.exit(2)
+    opt.process_tb.update_one({'_id': py_name}, {'$set': {'status': 1, 'desc': ', '.join(opt.result), 'updated_at': datetime.datetime.now()}})

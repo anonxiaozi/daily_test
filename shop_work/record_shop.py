@@ -11,9 +11,11 @@ class OptMongodb(object):
 
     def __init__(self, **kwargs):
         self.args = kwargs["args"]
-        self.conn = pymongo.MongoClient(self.args["host"], self.args["port"], socketTimeoutMS=2000)
+        self.conn = pymongo.MongoClient(self.args["host"], self.args["port"])
         self.db = self.conn[self.args["db"]]
         self.collection = self.db[self.args["collection"]]
+        self.process_db = self.conn[self.args['process_db']]
+        self.process_tb = self.process_db[self.args['process_tb']]
         # self.conn = pymongo.MongoClient(
         #     self.kwargs["host"],
         #     self.kwargs["port"],
@@ -116,26 +118,23 @@ class OptCSV(OptMongodb):
         self.read_fake_csv()    # 读取csv数据
         self.compare_serialID() # 去重
         self.record_data()      # 写入DB
-        if self.illegal_data:   # 打印未写入DB的数据
-            f = open("result", "a", encoding="utf-8")
-            # f.write("{} [ {} ]".format(str(datetime.datetime.now()), self.args["filename"]).center(50, "*") + "\n")
-            # illegal_data = "Illegal Data".center(50, "=")
-            # f.write(illegal_data + "\n")
-            # print(illegal_data)
-            for key, value in self.illegal_data.items():
-                for sub_value in value:
-                    d = key + ":" + str(sub_value)
-                    print(d)
-            else:
-                for illegal in self.illegal_data["illegal"]:
-                    f.write(illegal + "\n")
-            insert_num = len(self.result)   # 写入DB的数据number
-            record_rate = insert_num/len(self.result) if len(self.result) != 0 else "0.00%"
-            final_result = "Total {} data | Duplicate num: {} | Insert {} data | Illegal data: {} | Exists data: {} | Record rate: {:.2%}"\
-                .format(self.num, (self.num - len(self.result)), insert_num, len(self.illegal_data["illegal"]), len(self.illegal_data["exists"]), record_rate)
-            f.write(final_result + "\n\n")
-            print(final_result)
-            f.close()
+        if self.illegal_data['illegal']:   # 打印未写入DB的数据
+            # f = open("result", "a", encoding="utf-8")
+            # for key, value in self.illegal_data.items():
+            #     for sub_value in value:
+            #         d = key + ":" + str(sub_value)
+            #         print(d)
+            # else:
+            #     for illegal in self.illegal_data["illegal"]:
+            #         f.write(illegal + "\n")
+            # insert_num = len(self.result)   # 写入DB的数据number
+            # record_rate = insert_num/len(self.result) if len(self.result) != 0 else "0.00%"
+            # final_result = "Total {} data | Duplicate num: {} | Insert {} data | Illegal data: {} | Exists data: {} | Record rate: {:.2%}"\
+            #     .format(self.num, (self.num - len(self.result)), insert_num, len(self.illegal_data["illegal"]), len(self.illegal_data["exists"]), record_rate)
+            # f.write(final_result + "\n\n")
+            # print(final_result)
+            # f.close()
+            return ', '.join(self.illegal_data['illegal'])
 
 
 def get_args():
