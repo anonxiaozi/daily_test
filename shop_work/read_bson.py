@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Time: 2019/4/18
-# @File: first.py
+# @File: read_bson.py
 
 import pymongo
 from bson import json_util
