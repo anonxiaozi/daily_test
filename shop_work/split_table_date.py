@@ -99,6 +99,7 @@ class SplitDB(object):
         self.read_table = self.source_db[self.args["read_table"]]
         self.process_db = self.conn[self.args['process_db']]
         self.process_tb = self.process_db[self.args['process_tb']]
+        self.target_db2 = self.conn['view']
         self.result = []
 
     def get_start_end_date(self):
@@ -165,10 +166,12 @@ class SplitDB(object):
         写入数据库，一次写入2w条
         """
         self.target_db[collection].drop()
+        self.target_db2[collection].drop()
         n = 0
         while n < len(data):
             data2w = data[n:n+20000]
             self.target_db[collection].insert_many(data2w)
+            self.target_db2[collection].insert_many(data2w)
             n += 20000
 
     def aggregate_and_index(self, write_table_name):
@@ -291,11 +294,11 @@ def get_args():
     命令行参数
     """
     arg = argparse.ArgumentParser(prog=os.path.basename(__file__), usage='%(prog)s filter [options]')
-    arg.add_argument("-H", "--host", type=str, help="DB host, default=%(default)s", default="10.15.101.63")
-    arg.add_argument("-p", "--port", type=int, help="DB port, default=%(default)s", default=27027)
-    arg.add_argument("-s", "--source_db", type=str, help="DB name, default=%(default)s", default="test")
-    arg.add_argument("-t", "--target_db", type=str, help="DB name, default=%(default)s", default="test01")
-    arg.add_argument("-r", "--read_table", type=str, help="read collection name, default=%(default)s", default="StoreTransaction_hash")
+    arg.add_argument("-H", "--host", type=str, help="DB host, default: %(default)s", default="10.15.101.63")
+    arg.add_argument("-p", "--port", type=int, help="DB port, default: %(default)s", default=27027)
+    arg.add_argument("-s", "--source_db", type=str, help="DB name, default: %(default)s", default="core")
+    arg.add_argument("-t", "--target_db", type=str, help="DB name, default: %(default)s", default="core")
+    arg.add_argument("-r", "--read_table", type=str, help="read collection name, default: %(default)s", default="StoreTransaction")
     arg.add_argument("-d", "--dateRange", type=str, help="Date Range, such as: \"20181112-20190410\"", required=True)
     arg.add_argument("--process_db", type=str, help="Execution status record database, default: %(default)s", default="process")
     arg.add_argument("--process_tb", type=str, help="Execution status record collection, default: %(default)s", default="ProcessStatus")

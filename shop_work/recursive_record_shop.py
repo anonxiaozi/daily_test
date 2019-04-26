@@ -84,10 +84,10 @@ def get_args():
     命令行参数
     """
     arg = argparse.ArgumentParser(prog=os.path.abspath(__file__), usage='%(prog)s filter [options]')
-    arg.add_argument("-H", "--host", type=str, help="DB host, default=%(default)s", default="10.15.101.63")
-    arg.add_argument("-p", "--port", type=int, help="DB port, default=%(default)s", default=27027)
-    arg.add_argument("-s", "--db", type=str, help="DB name, default=%(default)s", default="blockchain_test")
-    arg.add_argument("-c", "--collection", type=str, help="Record collection name, default=%(default)s", default="LocationFromWeb")
+    arg.add_argument("-H", "--host", type=str, help="DB host, default: %(default)s", default="10.15.101.63")
+    arg.add_argument("-p", "--port", type=int, help="DB port, default: %(default)s", default=27027)
+    arg.add_argument("-s", "--db", type=str, help="DB name, default: %(default)s", default="raw")
+    arg.add_argument("-c", "--collection", type=str, help="Record collection name, default: %(default)s", default="LocationFromWeb")
     arg.add_argument("--top_path", type=str, help="Dir name", required=True)
     arg.add_argument("--process_db", type=str, help="Execution status record database, default: %(default)s", default="process")
     arg.add_argument("--process_tb", type=str, help="Execution status record collection, default: %(default)s", default="ProcessStatus")

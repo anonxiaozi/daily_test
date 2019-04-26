@@ -84,12 +84,12 @@ class OptCSV(OptMongodb):
 
     def record_data(self):
         """
-        写入数据库，一次写入2k条
+        写入数据库，一次写入2w条
         """
         n = 0
         data = list(self.result.values())
         while n < len(data):
-            data2k = [
+            data2w = [
                 {
                     "SerialID": x[0][0],
                     "Receiver": x[0][1],
@@ -99,8 +99,8 @@ class OptCSV(OptMongodb):
                     "OrderTime": x[0][5]
                 } for x in data[n:n+2000] if x
             ]
-            self.insert_many(data2k)
-            n += 2000
+            self.insert_many(data2w)
+            n += 20000
 
     def compare_serialID(self):
         """
@@ -142,10 +142,10 @@ def get_args():
     命令行参数
     """
     arg = argparse.ArgumentParser(prog="Record_Shop", usage='%(prog)s filter [options]')
-    arg.add_argument("--host", type=str, help="DB host, default=%(default)s", default="10.15.101.63")
-    arg.add_argument("--port", type=int, help="DB port, default=%(default)s", default=27027)
-    arg.add_argument("--db", type=str, help="DB name, default=%(default)s", default="blockchain_test")
-    arg.add_argument("--collection", type=str, help="Record collection name, default=%(default)s", default="LocationFromWeb")
+    arg.add_argument("--host", type=str, help="DB host, default: %(default)s", default="10.15.101.63")
+    arg.add_argument("--port", type=int, help="DB port, default: %(default)s", default=27027)
+    arg.add_argument("--db", type=str, help="DB name, default: %(default)s", default="raw")
+    arg.add_argument("--collection", type=str, help="Record collection name, default: %(default)s", default="LocationFromWeb")
     arg.add_argument("--filename", type=str, help="Source file name", required=True)
     return arg
 

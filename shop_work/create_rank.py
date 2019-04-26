@@ -26,17 +26,17 @@ class OptMongodb(object):
         self.result = []
 
     def check_index(self):
-        transaction_idx = self.source_db['Transaction_hash'].index_information()
+        transaction_idx = self.source_db['Transaction'].index_information()
         if 'createTime_idx' not in transaction_idx:
-            self.source_db['Transaction_hash'].create_index('createTime', name='createTime_idx')
+            self.source_db['Transaction'].create_index('createTime', name='createTime_idx')
         if 'store_idx' not in transaction_idx:
-            self.source_db['Transaction_hash'].create_index('store', name='store_idx')
+            self.source_db['Transaction'].create_index('store', name='store_idx')
 
-        productTransaction_idx = self.source_db['ProductTransaction_hash'].index_information()
+        productTransaction_idx = self.source_db['ProductTransaction'].index_information()
         if 'productInfo_idx' not in productTransaction_idx:
-            self.source_db['ProductTransaction_hash'].create_index('productInfo', name='productInfo_idx')
+            self.source_db['ProductTransaction'].create_index('productInfo', name='productInfo_idx')
         if 'transaction_idx' not in productTransaction_idx:
-            self.source_db['ProductTransaction_hash'].create_index('transaction', name='transaction_idx')
+            self.source_db['ProductTransaction'].create_index('transaction', name='transaction_idx')
 
     def get_transaction_data(self):
         self.check_index()
@@ -55,7 +55,7 @@ class OptMongodb(object):
             },
             {
                 '$lookup': {
-                    'from': 'Transaction_hash',
+                    'from': 'Transaction',
                     'localField': 'storeId',
                     'foreignField': 'store',
                     'as': 'transaction'
@@ -66,7 +66,7 @@ class OptMongodb(object):
                 }
             }, {
                 '$lookup': {
-                    'from': 'ProductTransaction_hash',
+                    'from': 'ProductTransaction',
                     'localField': 'transaction._id',
                     'foreignField': 'transaction',
                     'as': 'product'
@@ -77,7 +77,7 @@ class OptMongodb(object):
                 }
             }, {
                 '$lookup': {
-                    'from': 'ProductInfo_hash',
+                    'from': 'ProductInfo',
                     'localField': 'product.productInfo',
                     'foreignField': '_id',
                     'as': 'product_info'
@@ -241,7 +241,7 @@ class OptMongodb(object):
             data2w = data[n:n+20000]
             self.target_db[collection].insert_many(data2w)
             n += 20000
-        self.result.append('write table {}/{} completed.'.format(self.args['target_db'], collection))
+        self.result.append('write table {0}/{1} completed.'.format(self.args['target_db'], collection))
 
 
 def get_args():
@@ -249,10 +249,10 @@ def get_args():
     命令行参数
     """
     arg = argparse.ArgumentParser(prog=os.path.basename(__file__), usage='%(prog)s filter [options]')
-    arg.add_argument("-H", "--host", type=str, help="DB host, default=%(default)s", default="10.15.101.63")
-    arg.add_argument("-p", "--port", type=int, help="DB port, default=%(default)s", default=27027)
-    arg.add_argument("-s", "--source_db", type=str, help="DB name, default=%(default)s", default="test")
-    arg.add_argument("-t", "--target_db", type=str, help="DB name, default=%(default)s", default="test01")
+    arg.add_argument("-H", "--host", type=str, help="DB host, default: %(default)s", default="10.15.101.63")
+    arg.add_argument("-p", "--port", type=int, help="DB port, default: %(default)s", default=27027)
+    arg.add_argument("-s", "--source_db", type=str, help="DB name, default: %(default)s", default="core")
+    arg.add_argument("-t", "--target_db", type=str, help="DB name, default: %(default)s", default="view")
     arg.add_argument("-c", "--collection", type=str, help="read collection name", required=True)
     # arg.add_argument("-d", "--dateRange", type=str, help="Date Range, such as: \"20181112-20190410\"", required=True)
     arg.add_argument("--process_db", type=str, help="Execution status record database, default: %(default)s", default="process")
