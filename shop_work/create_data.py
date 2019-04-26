@@ -121,5 +121,5 @@ if __name__ == "__main__":
         "count": 1000000,
         "action": "insert_many",    # 操作方法
     }
-    mongo = MongoDB(args=args)
-    data = mongo.run()
+    # mongo = MongoDB(args=args)
+    # data = mongo.run()

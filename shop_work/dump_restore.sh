@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 remote_dir=/var/ftp/pub/mongo_dump
-remote_addr=192.168.1.100
+remote_addr=10.15.101.62
 remote_port=22
 remote_user=dbbak
-backup_name=mongo_100_dump.archive
+backup_name=mongo_63_dump.archive
 
 do_dump() {
     f_name=${3}_$(date +'%F_%H_%M_%S').tgz

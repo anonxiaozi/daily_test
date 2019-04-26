@@ -1,0 +1,79 @@
+db.StoreTransaction_hash.aggregate(
+[{$group: {
+  '_id': '$storeId',
+  'sum': {
+      '$sum': '$sum'
+  },
+
+  'count': {
+      '$sum': '$count'
+  },
+  'data': {
+      '$push': '$$ROOT'
+  }
+}}, {$project: {
+  'storeId': '$_id',
+  'sum': '$sum',
+  'count': '$count',
+  'data0': {
+      '$arrayElemAt': [
+          '$data', 0
+      ]
+  }
+}}, {$project: {
+  '_id': 0,
+  'avg_sum': {
+      '$divide': [
+          '$sum', '$count'
+      ]
+  },
+  'date': '$data0.date',
+  'storeId': '$_id',
+  'sum': '$sum',
+  'count': '$count',
+  'province': '$data0.province',
+  'city': '$data0.city',
+  'district': '$data0.district',
+  'zone': '$data0.zone',
+}}, {$lookup: {
+  'from': 'Transaction_hash',
+  'let': {storeId: '$storeId'},
+  'pipeline': [
+    { $match: { $expr: { $eq: ['$store', '$$storeId'] } }},
+    { $project: {'_id': 1} }
+  ],
+  'as': 'transaction'
+}}, {$unwind: {
+  'path': '$transaction'
+}}, {$lookup: {
+  'from': 'ProductTransaction_hash',
+  'let': { 'transaction_id': '$transaction._id'},
+  'pipeline': [
+    { $match: { $expr: { $eq: [ '$transaction', '$$transaction_id']}}},
+    { $project: {'_id': 0,'productinfo': '$productInfo', 'product_price': '$price', 'product_amount': '$amount'} }
+  ],
+  'as': 'product'
+}}, {$unwind: {
+  'path': '$product'
+}}, {$lookup: {
+  'from': 'ProductInfo_hash',
+  'let': {'productinfo': '$product.productinfo'},
+  'pipeline': [
+    {$match: {$expr: {$eq: ['$_id', '$$productinfo']}}},
+    {$project: {'_id': 0,'title': '$title', 'company_sketch': '$company_sketch'}}
+  ],
+  'as': 'product_info'
+}}, {$unwind: {
+  'path': '$product_info',
+}}, {$project: {
+  '_id': 0,
+  'date': '$date',
+  'province': '$province',
+  'city': '$city',
+  'district': '$district',
+  'zone': '$zone',
+  'title': '$product_info.title',
+  'company_sketch': '$product_info.company_sketch',
+  'product_sum': {'$multiply': ['$product.product_price', '$product.product_amount']},
+}}, {$out: 'all_product'}],
+{allowDiskUse: true})
