@@ -34,7 +34,11 @@ class OptCSV(object):
         if "_" in file_name:
             start_time_str, end_time_str = self.have_end_time.findall(file_name)[0]
         else:
-            start_time_str, end_time_str = self.not_have_end_time.findall(file_name)[0], None
+            try:
+                start_time_str, end_time_str = self.not_have_end_time.findall(file_name)[0], None
+            except IndexError:
+                self.the_result.append('read file {} failed: file name error'.format(file_name))
+                return False, False
         start_time = datetime.datetime.strptime(start_time_str, "%Y%m%d")
         if not end_time_str:
             end_time = start_time + datetime.timedelta(days=1)
@@ -47,6 +51,8 @@ class OptCSV(object):
         for file_path in self.file_path_list:
             drity_data = {"incorrect_time": [], "no_time": []}
             start_time, end_time = self.get_file_name_date(os.path.basename(file_path))
+            if not start_time and not end_time:
+                continue
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     for line in f.readlines():
@@ -57,23 +63,17 @@ class OptCSV(object):
                                 drity_data["incorrect_time"].append(line[:18])
                         else:
                             drity_data["no_time"].append(line[:18])
-                    # else:
-                        # with open("result", "a", encoding="utf-8") as f:
-                            # f.write("{}".format(file_path).center(60, "=") + "\n")
-                            # if drity_data["no_time"] or drity_data["incorrect_time"]:
-                            #     for key, value in drity_data.items():
-                            #         f.write("[ {} ]".format(key) + ": ")
-                            #         f.write(str(value) + "\n")
                 self.args["filename"] = file_path
                 record = record_shop.OptCSV(args=self.args)
                 result = record.run()
                 if result:
                     self.the_result.append('{}: {}'.format(file_path, record))
+            except UnicodeDecodeError:
+                print("read file {} faild. [ unicode error ]".format(file_path))
+                continue
             except Exception as e:
-                # with open("result", "a", encoding="utf-8") as f:
-                #     f.write("{}".format(file_path).center(60, "=") + "\n")
-                #     f.write("!!!!!!!!!!!!!!!!! Read File Failed: {}\n".format(e))
-                self.the_result.append({file_path: e})
+                self.the_result.append("{}: {}".format(file_path, e))
+                continue
 
     def start(self):
         self.detect_file_content_time()
@@ -108,10 +108,8 @@ if __name__ == "__main__":
             opt.process_tb.update_one({'_id': py_name}, {'$set': {'status': 2, 'desc': ', '.join(opt.the_result), 'updated_at': datetime.datetime.now()}})
             sys.exit(2)
     except Exception as e:
-        # with open("result", "a") as f:
-            # f.write("\nExit Error: {}".format(e))
-        # print(e)
-        opt.the_result.append(e)
+        print('Error: ', e)
+        opt.the_result.append(str(e))
         opt.process_tb.update_one({'_id': py_name}, {'$set': {'status': 2, 'desc': ', '.join(opt.the_result), 'updated_at': datetime.datetime.now()}})
         sys.exit(2)
     opt.process_tb.update_one({'_id': py_name}, {'$set': {'status': 1, 'desc': ', '.join(opt.the_result), 'updated_at': datetime.datetime.now()}})

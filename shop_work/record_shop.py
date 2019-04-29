@@ -97,7 +97,7 @@ class OptCSV(OptMongodb):
                     "Name": x[0][3],
                     "Cellphone": x[0][4],
                     "OrderTime": x[0][5]
-                } for x in data[n:n+2000] if x
+                } for x in data[n:n+20000] if x
             ]
             self.insert_many(data2w)
             n += 20000
@@ -118,22 +118,16 @@ class OptCSV(OptMongodb):
         self.read_fake_csv()    # 读取csv数据
         self.compare_serialID() # 去重
         self.record_data()      # 写入DB
-        if self.illegal_data['illegal']:   # 打印未写入DB的数据
-            # f = open("result", "a", encoding="utf-8")
-            # for key, value in self.illegal_data.items():
-            #     for sub_value in value:
-            #         d = key + ":" + str(sub_value)
-            #         print(d)
-            # else:
-            #     for illegal in self.illegal_data["illegal"]:
-            #         f.write(illegal + "\n")
-            # insert_num = len(self.result)   # 写入DB的数据number
-            # record_rate = insert_num/len(self.result) if len(self.result) != 0 else "0.00%"
-            # final_result = "Total {} data | Duplicate num: {} | Insert {} data | Illegal data: {} | Exists data: {} | Record rate: {:.2%}"\
-            #     .format(self.num, (self.num - len(self.result)), insert_num, len(self.illegal_data["illegal"]), len(self.illegal_data["exists"]), record_rate)
-            # f.write(final_result + "\n\n")
-            # print(final_result)
-            # f.close()
+        insert_num = len(self.result)   # 写入DB的数据number
+        if insert_num > 0:
+            record_rate = insert_num / self.num
+        else:
+            record_rate = 0
+        final_result = "Total {} data | Duplicate num: {} | Insert {} data | Illegal data: {} | Exists data: {} | Record rate: {:.2%}"\
+            .format(self.num, (self.num - insert_num), insert_num, len(self.illegal_data["illegal"]), len(self.illegal_data["exists"]), record_rate)
+        print(self.args['filename'].center(60, '*'))
+        print(final_result)
+        if self.illegal_data['illegal']:   # return 无法匹配的数据
             return ', '.join(self.illegal_data['illegal'])
 
 
@@ -147,6 +141,8 @@ def get_args():
     arg.add_argument("--db", type=str, help="DB name, default: %(default)s", default="raw")
     arg.add_argument("--collection", type=str, help="Record collection name, default: %(default)s", default="LocationFromWeb")
     arg.add_argument("--filename", type=str, help="Source file name", required=True)
+    arg.add_argument("--process_db", type=str, help="Execution status record database, default: %(default)s", default="process")
+    arg.add_argument("--process_tb", type=str, help="Execution status record collection, default: %(default)s", default="ProcessStatus")
     return arg
 
 
