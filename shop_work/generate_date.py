@@ -4,8 +4,6 @@
 
 import datetime
 import calendar
-import argparse
-import os
 
 
 class GenerateDate(object):
