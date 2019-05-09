@@ -35,9 +35,9 @@ class GetIntervalDays(ConnectDB):
             item['date'].sort()     # 日期排序
             if len(item['date']) >= 2:
                 total_days = (item['date'][-1] - item['date'][0]).days  # 最后下单日期减去第一次下单的日期
+                new_item['IntervalDays'] = float('{:.2f}'.format(total_days / (item['num'] - 1)))  # 保留两位小数
             else:
-                total_days = 0      # 如果只下单一次，则认为总天数为0
-            new_item['IntervalDays'] = float('{:.2f}'.format(total_days, item['num'])) # 保留两位小数
+                new_item['IntervalDays'] = float('0.0')
             new_data.append(new_item)
 
         collection_name = 'IntervalDays'

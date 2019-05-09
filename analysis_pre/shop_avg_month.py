@@ -7,6 +7,7 @@
 '''
 
 from conn_mongo import ConnectDB
+from decimal import Decimal
 
 
 class GetMonthAvg(ConnectDB):
@@ -25,8 +26,19 @@ class GetMonthAvg(ConnectDB):
         cursor.close()
         return data
 
-    def handle(self):
+    def parse_data(self):
         data = self.query()
+        for item in data:
+            tmp_date_list = []
+            for date in item['date']:
+                tmp_date_list.append(date.strftime('%Y-%m'))
+            item['avg_month'] = Decimal("{}".format(item['num']/len(set(tmp_date_list)))).quantize(Decimal("0.01")).__float__()
+            del(item['date'])
+            del(item['num'])
+        return data
+
+    def handle(self):
+        data = self.parse_data()
         collection_name = 'month_avg'
         collection_obj = self.record_db[collection_name]
         collection_obj.drop()
@@ -39,46 +51,14 @@ class GetMonthAvg(ConnectDB):
 if __name__ == "__main__":
     filter_month = [
         {
-            '$project': {
-                'year': {
-                    '$year': {
-                        'date': '$date'
-                    }
-                },
-                'month': {
-                    '$month': {
-                        'date': '$date'
-                    }
-                },
-                'storeId': '$storeId',
-                'sum': '$sum',
-                'count': '$count'
-            }
-        }, {
             '$group': {
-                '_id': {
-                    'month': '$month',
-                    'year': '$year',
-                    'storeId': '$storeId'
+                '_id': '$storeId',
+                'num': {
+                    '$sum': "$sum"
                 },
-                'count': {
-                    '$sum': '$count'
-                },
-                'sum': {
-                    '$sum': '$sum'
+                'date': {
+                    '$push': '$date'
                 }
-            }
-        }, {
-            '$project': {
-                '_id': 0,
-                'storeId': '$_id.storeId',
-                'avg': {
-                    '$divide': [
-                        '$sum', '$count'
-                    ]
-                },
-                'year': '$_id.year',
-                'month': '$_id.month'
             }
         }
     ]

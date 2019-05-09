@@ -25,7 +25,7 @@ class GetMonthAvg(ConnectDB):
         return deviation
 
     def query(self):
-        cursor = self.conn['core']['Transaction'].aggregate(
+        cursor = self.conn['core']['StoreTransaction'].aggregate(
             self.args['filter'],
             allowDiskUse=True
         )
@@ -52,9 +52,9 @@ if __name__ == "__main__":
     filter_deviation = [
         {
             '$group': {
-                '_id': '$store',
+                '_id': '$storeId',
                 'amount': {
-                    '$push': '$actualPaid'
+                    '$push': '$sum'
                 }
             }
         }

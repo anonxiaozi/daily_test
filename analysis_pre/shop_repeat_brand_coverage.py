@@ -48,49 +48,52 @@ class GetMonthAvg(ConnectDB):
     def parse_data(self):
         data = self.query()
         total_company_num = self.get_brand_num()
-
-        get_data_time = datetime.now()
-        get_data_cost = (get_data_time - self.start).seconds
-        print('Get data cost: {} s'.format(get_data_cost))
-        self.start = get_data_time
-
         result = {}
         final = []
         for item in data:
-            date_list = [
-                datetime(2018, 1, 1), datetime(2018, 4, 1), datetime(2018, 7, 1), datetime(2018, 10, 1),
-                datetime(2019, 1, 1), datetime(2019, 4, 1), datetime(2019, 7, 1), datetime(2019, 10, 1)
-            ]
-            date_dict = {
-                datetime(2018, 1, 1): [], datetime(2018, 4, 1): [], datetime(2018, 7, 1): [], datetime(2018, 10, 1): [],
-                datetime(2019, 1, 1): [], datetime(2019, 4, 1): [], datetime(2019, 7, 1): [], datetime(2019, 10, 1): []
-            }
             item_storeId, item_paiedTime, item_company_sketch = item['storeId'], item['paiedTime'], item['company_sketch']
             if item_storeId not in result:
-                result[item_storeId] = date_dict
-            for date in date_list:
-                if item_paiedTime < date:       # 如果日期小于date，则认为是此date的前一个季节范围内的订单
-                    idx = date_list.index(date)
-                    if idx != 0:        # 如果等于0，说明是2018-01-01之前的订单，也放到2018-01-01开始的季节中
-                        idx -= 1
-                    result[item_storeId][date_list[idx]].append(item_company_sketch)
-                    break
-        else:
-            for key, value in result.items():
-                tmp_dict = dict()
-                tmp_dict['_id'] = key
-                for sub_key, sub_value in value.items():
-                    tmp_dict[sub_key.strftime('%Y-%m')] = Decimal(len(sub_value) / total_company_num).quantize(Decimal('0.01')).__float__()
-                final.append(tmp_dict)
+                result[item_storeId] = dict()
+                result[item_storeId][item_company_sketch] = [item_paiedTime]
+                continue
+            if item_company_sketch not in result[item_storeId]:
+                result[item_storeId][item_company_sketch] = [item_paiedTime]
+                continue
+            result[item_storeId][item_company_sketch].append(item_paiedTime)
+        for store, company_info in result.items():
+            tmp_result = dict()
+            tmp_result[store] = 0.0
+            for company, date_list in company_info.items():
+                if len(date_list) < 3:  # 同品牌购买次数不足3次，不计算
+                    continue
+                size = self.compare_date(date_list)
+                tmp_result[store] += size
+            tmp_result[store] = Decimal("{}".format(tmp_result[store] / total_company_num)).quantize(Decimal("0.01")).__float__()
+            final.append({"_id": store, "repeat_scale": tmp_result[store]})
         return final
+
+    @staticmethod
+    def compare_date(date_list):
+        num, count = 0, 0
+        date_list.sort()
+        while date_list:
+            if count == 3:
+                num = 1
+                break
+            date_end = date_list.pop()
+            if not date_list:
+                break
+            date = date_list[-1]
+            month_num = (date_end.year - date.year) * 12 + (date_end.month - date.month)
+            if month_num == 0:
+                continue
+            if month_num == 1:
+                count += 1
+                continue
+        return num
 
     def handle(self):
         data = self.parse_data()
-        parse_data_time = datetime.now()
-        parse_data_cost = (parse_data_time - self.start).seconds
-        print('Parse data cost: {} s'.format(parse_data_cost))
-        for item in data:
-            print(item)
         collection_name = 'SeasonBrandCoverage'
         collection_obj = self.record_db[collection_name]
         collection_obj.drop()
