@@ -59,8 +59,8 @@ class ShopDistance(ConnectDB):
             tmp_company_dict = {}.fromkeys(self.choice_list, 0.0)
             if _id not in store_dict:
                 store_dict[_id] = {
-                    'receiver': store['receiver'], 'sum': 0.0,
-                    'province': store['province'], 'city': store['city'], 'district': store['district'],
+                    'receiver': store['receiver'], 'sum': 0.0, 'province': store['province'],
+                     'city': store['city'], 'district': store['district'], 'zone': store['zone']
                 }
                 store_dict[_id].update(tmp_company_dict)
             company = store['company_sketch']
@@ -80,7 +80,7 @@ class ShopDistance(ConnectDB):
         for key, value in info_dict.items():
             tmp = {
                 '_id': key, 'sum': value['sum'], 'longitude': value['longitude'], 'latitude': value['latitude'],
-                'province': value['province'], 'city': value['city'], 'district': value['district']
+                'province': value['province'], 'city': value['city'], 'district': value['district'], 'zone': value['zone']
             }
             for company_name in self.choice_list:
                 tmp[company_name] = value[company_name]
@@ -105,7 +105,7 @@ class ShopDistance(ConnectDB):
             tmp_result = {
                 '_id': item['_id'], 'around_v': sum, 'rec_dis_acc': rec_dis_acc, 'near_store_account': near_store_count,
                 'sum': self.handle_decimal(item['sum']), 'longitude': item['longitude'], 'latitude': item['latitude'],
-                'province': item['province'], 'city': item['city'], 'district': item['district']
+                'province': item['province'], 'city': item['city'], 'district': item['district'], 'zone': item['zone']
             }
             if near_store_count == 0:
                 tmp_result['rec_dis_avg'] = 0
@@ -113,7 +113,7 @@ class ShopDistance(ConnectDB):
                 tmp_result['rec_dis_avg'] = self.handle_decimal(tmp_result['rec_dis_acc'] / tmp_result['near_store_account'])
             for company_name in self.choice_list:
                 tmp_result[company_name] = self.handle_decimal(item[company_name])
-            tmp_result.update({'province': item['province'], 'city': item['city'], 'district': item['district']})
+            tmp_result.update({'province': item['province'], 'city': item['city'], 'district': item['district'], 'zone': item['zone']})
             result.append(tmp_result)
 
         collection_name = 'StoreAround'
@@ -145,7 +145,8 @@ if __name__ == "__main__":
                     '$push': {
                         'province': '$province',
                         'city': '$city',
-                        'district': '$district'
+                        'district': '$district',
+                        'zone': '$zone'
                     }
                 }
             }
@@ -163,7 +164,8 @@ if __name__ == "__main__":
                 'sum': '$sum',
                 'province': '$address.province',
                 'city': '$address.city',
-                'district': '$address.district'
+                'district': '$address.district',
+                'zone': '$address.zone'
             }
         }, {
             '$lookup': {
@@ -256,6 +258,7 @@ if __name__ == "__main__":
                 'province': '$province',
                 'city': '$city',
                 'district': '$district',
+                'zone': '$zone',
                 'company_sum': {
                     '$multiply': [
                         '$product.product_price', '$product.product_amount'
@@ -267,8 +270,8 @@ if __name__ == "__main__":
         }
     ]
     args = {
-        'host': '10.15.101.63',
-        'port': 27027,
+        'host': '10.15.101.252',
+        'port': 27017,
         'filter': filter_interval,
         'record_db': 'analysis_pre'
     }
