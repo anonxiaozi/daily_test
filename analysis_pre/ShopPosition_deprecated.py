@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 # @Time: 2019/5/5
-# @File: shop_avg_month
+# @File: ShopPosition
 
 '''
-  平均复购天数，店铺所有订单间隔的平均天数，
-  如果只下单一次，则认为平均天数为0
+  求店铺与其他店铺之间的距离
 '''
 
 from conn_mongo import ConnectDB
 from decimal import Decimal
 
 
-class GetIntervalDays(ConnectDB):
+class ShopPosition(ConnectDB):
 
     def __init__(self, **kwargs):
         self.args = kwargs['args']
@@ -92,5 +91,5 @@ if __name__ == "__main__":
         'filter': filter_interval,
         'record_db': 'analysis_pre'
     }
-    opt = GetIntervalDays(args=args)
+    opt = ShopPosition(args=args)
     opt.run()

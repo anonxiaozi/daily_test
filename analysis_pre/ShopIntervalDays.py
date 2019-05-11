@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Time: 2019/5/5
-# @File: shop_avg_month
+# @File: ShopIntervalDays
 
 '''
   平均复购天数，店铺所有订单间隔的平均天数，
@@ -10,7 +10,7 @@
 from conn_mongo import ConnectDB
 
 
-class GetIntervalDays(ConnectDB):
+class ShopIntervalDays(ConnectDB):
 
     def __init__(self, **kwargs):
         self.args = kwargs['args']
@@ -69,5 +69,5 @@ if __name__ == "__main__":
         'filter': filter_interval,
         'record_db': 'analysis_pre'
     }
-    opt = GetIntervalDays(args=args)
+    opt = ShopIntervalDays(args=args)
     opt.run()

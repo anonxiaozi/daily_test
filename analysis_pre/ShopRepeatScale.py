@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Time: 2019/5/5
-# @File: shop_avg_month
+# @File: ShopRepeatScale
 
 '''
   月复购稳定率，有订单的月份除以第一单起至今的月份数量
@@ -10,7 +10,7 @@ from conn_mongo import ConnectDB
 from datetime import datetime
 
 
-class RepeatScale(ConnectDB):
+class ShopRepeatScale(ConnectDB):
 
     def __init__(self, **kwargs):
         self.args = kwargs['args']
@@ -75,5 +75,5 @@ if __name__ == "__main__":
         'filter': filter_scale,
         'record_db': 'analysis_pre'
     }
-    opt = RepeatScale(args=args)
+    opt = ShopRepeatScale(args=args)
     opt.run()

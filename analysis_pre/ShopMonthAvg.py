@@ -1,45 +1,45 @@
 # -*- coding: utf-8 -*-
 # @Time: 2019/5/5
-# @File: shop_avg_month
+# @File: ShopMonthAvg
 
 '''
-  订单金额稳定率，店铺所有订单金额的标准差
+  月订单金额，店铺在每个自然月的订单总金额除以总count
 '''
 
 from conn_mongo import ConnectDB
-from numpy import std
 from decimal import Decimal
 
 
-class GetMonthAvg(ConnectDB):
+class ShopMonthAvg(ConnectDB):
 
     def __init__(self, **kwargs):
         self.args = kwargs['args']
         super().__init__(args=self.args)
         self.record_db = self.conn[self.args['record_db']]
 
-    @staticmethod
-    def standard_deviation(array, ddof=0):
-        deviation = std(array, ddof=ddof).__float__()
-        deviation = Decimal(deviation).quantize(Decimal('0.01')).__float__()
-        return deviation
-
     def query(self):
         cursor = self.conn['core']['StoreTransaction'].aggregate(
             self.args['filter'],
             allowDiskUse=True
         )
-        data = []
-        for item in cursor:
-            tmp_item = {'_id': item['_id']}
-            tmp_item['deviation'] = self.standard_deviation(item['amount'])
-            data.append(tmp_item)
+        data = [x for x in cursor]
         cursor.close()
         return data
 
-    def handle(self):
+    def parse_data(self):
         data = self.query()
-        collection_name = 'AmountStdDeviation'
+        for item in data:
+            tmp_date_list = []
+            for date in item['date']:
+                tmp_date_list.append(date.strftime('%Y-%m'))
+            item['avg_month'] = Decimal("{}".format(item['num']/len(set(tmp_date_list)))).quantize(Decimal("0.01")).__float__()
+            del(item['date'])
+            del(item['num'])
+        return data
+
+    def handle(self):
+        data = self.parse_data()
+        collection_name = 'month_avg'
         collection_obj = self.record_db[collection_name]
         collection_obj.drop()
         self.do_write(collection_obj, data)
@@ -49,12 +49,15 @@ class GetMonthAvg(ConnectDB):
 
 
 if __name__ == "__main__":
-    filter_deviation = [
+    filter_month = [
         {
             '$group': {
                 '_id': '$storeId',
-                'amount': {
-                    '$push': '$sum'
+                'num': {
+                    '$sum': "$sum"
+                },
+                'date': {
+                    '$push': '$date'
                 }
             }
         }
@@ -62,8 +65,8 @@ if __name__ == "__main__":
     args = {
         'host': '10.15.101.63',
         'port': 27027,
-        'filter': filter_deviation,
+        'filter': filter_month,
         'record_db': 'analysis_pre'
     }
-    opt = GetMonthAvg(args=args)
+    opt = ShopMonthAvg(args=args)
     opt.run()
