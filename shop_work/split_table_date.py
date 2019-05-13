@@ -196,6 +196,7 @@ class SplitDB(object):
         avg_sum_idx = pymongo.IndexModel([('avg_sum', pymongo.DESCENDING)], name='avg_sum_idx')
         province_idx = pymongo.IndexModel([('province', pymongo.ASCENDING)], name='province_idx')
         province_city_idx = pymongo.IndexModel([('province', pymongo.ASCENDING), ('city', pymongo.ASCENDING)], name='province_city_idx')
+        sum_idx = pymongo.IndexModel([('sum', pymongo.ASCENDING)], name='sum_idx')
         province_city_district_idx = pymongo.IndexModel([
             ('province', pymongo.ASCENDING),
             ('city', pymongo.ASCENDING),
@@ -207,8 +208,9 @@ class SplitDB(object):
             ('district', pymongo.ASCENDING),
             ('zone', pymongo.ASCENDING)
         ], name='province_city_district_zone_idx')
-        self.target_db[write_table_name].create_indexes([count_idx, num_idx, storeId_idx, avg_sum_idx, province_idx, province_city_idx, province_city_district_idx, province_city_district_zone_idx])
-        idx_data = 'create index {}/{} completed.'.format(self.args['target_db'], write_table_name)
+        self.target_db[write_table_name].create_indexes([count_idx, num_idx, storeId_idx, avg_sum_idx, province_idx, province_city_idx, province_city_district_idx, province_city_district_zone_idx, sum_idx])
+        self.conn['view'][write_table_name].create_indexes([count_idx, num_idx, storeId_idx, avg_sum_idx, province_idx, province_city_idx, province_city_district_idx, province_city_district_zone_idx, sum_idx])
+        idx_data = 'create index {}/{} completed. create index {}/{} completed'.format(self.args['target_db'], write_table_name, 'view', write_table_name)
         self.result.append(idx_data)
         return True
 
