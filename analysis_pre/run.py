@@ -591,6 +591,118 @@ if __name__ == '__main__':
                     'company_sketch': '$product_info.company_sketch'
                 }
             }
+        ],
+        'ShopBrandLvJian_filter': [
+            {'$match': {
+                'title': { '$regex': '绿箭' }
+            }},
+            {'$project': {
+                'title': '$title'
+            }},
+            {'$lookup': {
+                'from': 'ProductTransaction',
+                'let': {
+                    'productid': '$_id'
+                },
+                'pipeline': [
+                    {
+                    '$match': {
+                        '$expr': {
+                            '$eq': [
+                                '$productInfo', '$$productid'
+                            ]
+                        }
+                    }},
+                    {
+                    '$project': {
+                        'transaction': '$transaction',
+                        'amount': '$amount',
+                        'sum': { '$multiply': ['$price', '$amount'] }
+                    }}
+                ],
+                    'as': 'producttransaction'
+                }},
+                {'$unwind': {
+                    'path': '$producttransaction'
+                }},
+                {'$lookup': {
+                    'from': 'Transaction',
+                    'let': {
+                        'transactionid': '$producttransaction.transaction'
+                    },
+                    'pipeline': [
+                        {
+                            '$match': {
+                                '$expr': {
+                                    '$eq': [
+                                        '$_id', '$$transactionid'
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'paiedTime': '$paiedTime',
+                                'store': '$store',
+                                'sum': '$sum'
+                            }
+                        }
+                    ],
+                    'as': 'transaction'
+                }},
+                {'$unwind': {
+                    'path': '$transaction'
+                }},
+                {'$project': {
+                    'store': '$transaction.store',
+                    'paiedTime': '$transaction.paiedTime',
+                    'amount': '$producttransaction.amount',
+                    'before_sum': '$producttransaction.sum',
+                    'after_sum': '$transaction.sum',
+                    'title': '$title',
+                    'transaction': '$producttransaction.transaction',
+                    '_id': 0
+            }}
+        ],
+        'ShopInfo_filter': [
+            {
+                '$group': {
+                    '_id': '$storeId',
+                    'sum': {
+                        '$sum': '$sum'
+                    },
+                    'address': {
+                        '$push': {
+                            'province': '$province',
+                            'city': '$city',
+                            'district': '$district',
+                            'zone': '$zone',
+                            'longitude': '$longitude',
+                            'latitude': '$latitude'
+                        }
+                    }
+                }
+            }, {
+                '$project': {
+                    'sum': '$sum',
+                    'address': {
+                        '$arrayElemAt': [
+                            '$address', 0
+                        ]
+                    }
+                }
+            }, {
+                '$project': {
+                    'sum': '$sum',
+                    'province': '$address.province',
+                    'city': '$address.city',
+                    'district': '$address.district',
+                    'zone': '$address.zone',
+                    'longitude': '$address.longitude',
+                    'latitude': '$address.latitude'
+                }
+            }
         ]
     }
     args = vars(get_args().parse_args())
