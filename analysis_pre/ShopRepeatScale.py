@@ -16,7 +16,7 @@ class ShopRepeatScale(ConnectDB):
         self.args = kwargs['args']
         super().__init__(args=self.args)
         self.record_db = self.conn[self.args['record_db']]
-        self.now = datetime(2019, 3, 1)
+        self.date_list = []
 
     def query(self):
         cursor = self.conn['core']['StoreTransaction'].aggregate(
@@ -27,6 +27,19 @@ class ShopRepeatScale(ConnectDB):
         cursor.close()
         return data
 
+    def get_last_date(self, data):
+        """
+        计算当前日期：所有订单的日期中，最后日期的下个月1号
+        """
+        for item in data:
+            self.date_list.extend(item['date'])
+        self.date_list.sort(reverse=True)
+        end = self.date_list[0]
+        if end.month == 12:
+            self.now = datetime(end.year + 1, 1, 1)
+        else:
+            self.now = datetime(end.year, end.month + 1, 1)
+
     def handle_date(self, date_list):
         start, end = date_list[0], date_list[-1]
         start_year, end_year, start_month, end_month = start.year, end.year, start.month, end.month
@@ -34,10 +47,14 @@ class ShopRepeatScale(ConnectDB):
         month_list = set([x.strftime('%Y%m') for x in date_list])
         if month_num <= 3:      # 有订单的月份数量小于3时，设为0.0
             return 0.0
-        return float('{:.2f}'.format(len(month_list) / month_num))
+        num = float('{:.2f}'.format(len(month_list) / month_num))
+        if num > 1:
+            print(start, end)
+        return num
 
     def handle(self):
         data = self.query()
+        self.get_last_date(data)
         new_data = []
         for item in data:
             new_item = {}
@@ -55,7 +72,6 @@ class ShopRepeatScale(ConnectDB):
 
 
 if __name__ == "__main__":
-    year_num = 2019
     filter_scale = [
         {
             '$group': {
@@ -70,8 +86,8 @@ if __name__ == "__main__":
         }
     ]
     args = {
-        'host': '10.15.101.63',
-        'port': 27027,
+        'host': '10.15.101.252',
+        'port': 27017,
         'filter': filter_scale,
         'record_db': 'analysis_pre'
     }
