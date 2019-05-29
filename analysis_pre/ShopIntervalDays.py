@@ -49,7 +49,6 @@ class ShopIntervalDays(ConnectDB):
 
 
 if __name__ == "__main__":
-    year_num = 2019
     filter_interval = [
         {
             '$group': {

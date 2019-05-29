@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 remote_dir=/var/ftp/pub/mongo_dump
-remote_addr=10.15.101.62
+remote_addr=ip
 remote_port=22
 remote_user=dbbak
-backup_name=mongo_63_dump.archive
+backup_name=${2}_${4}.`date +"%Y%m%d%H%M%S"`
 
 do_dump() {
-    f_name=${3}_$(date +'%F_%H_%M_%S').tgz
-    ssh -l ${remote_user} ${remote_addr} -- "/usr/bin/env mongodump --host $1 --port $2 --db=$3 --archive=${backup_name} && /usr/bin/tar zcf ${remote_dir}/$f_name mongo_63_dump.archive && /usr/bin/rm -f $f_name"
+    f_name=${backup_name}.tgz
+    ssh -l ${remote_user} ${remote_addr} -- "/usr/bin/env mongodump --host $1 --port $2 --db=$3 --archive=${backup_name} && /usr/bin/tar zcf ${remote_dir}/$f_name ${backup_name} && /usr/bin/rm -f ${backup_name}"
 }
 
 do_restore() {
