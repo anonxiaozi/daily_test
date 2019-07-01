@@ -4,7 +4,6 @@
 
 import pymongo
 import datetime
-import sys
 import calendar
 import argparse
 import os
@@ -56,7 +55,7 @@ class SplitDB(object):
                 ]
             },
             'storeId': '$storeId',
-            'accountname': '$data0.accountname',
+            'accountname': '$data0.Buyer.BuyMember',
             'name': {
                 '$arrayElemAt': [
                     '$data0.Store.Name', 0
