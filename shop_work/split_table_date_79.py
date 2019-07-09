@@ -58,7 +58,9 @@ class SplitDB(object):
             'accountname': '$data0.Buyer.BuyMember',
             'name': {
                 '$arrayElemAt': [
-                    '$data0.Store.Name', 0
+                    {
+                        '$reverseArray': '$data0.Store.Name'
+                    }, 0
                 ]
             },
             'storename': {
@@ -68,19 +70,23 @@ class SplitDB(object):
             },
             'sum': '$sum',
             'count': '$count',
-            'fulladdress': '$data0.FullAddress',
+            'fulladdress': '$data0.Store.FullAddress',
             'province': '$data0.Store.Province',
             'city': '$data0.Store.City',
             'district': '$data0.Store.District',
             'zone': '$data0.Store.Zone',
             'telephone': {
                 '$arrayElemAt': [
-                    '$data0.Store.Telephone', 0
+                    {
+                        '$reverseArray': '$data0.Store.Telephone'
+                    }, 0
                 ]
             },
             'cellphone': {
                 '$arrayElemAt': [
-                    '$data0.Store.Cellphone', 0
+                    {
+                        '$reverseArray': '$data0.Store.Cellphone'
+                    }, 0
                 ]
             },
             'longitude': '$data0.Store.Longitude',
