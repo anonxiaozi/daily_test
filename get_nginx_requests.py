@@ -6,6 +6,7 @@
 import re
 import os
 import sys
+import traceback
 
 
 class GetRequest(object):
@@ -16,8 +17,9 @@ class GetRequest(object):
         self.app = app
         self.data_dict = {'status': {'success': 0, 'failed': 0}, 'code': {}, 'pv': 0}
         self.total_count = 0
-        self.seek_dir = 'seeks'
-        self.log_file = '{}_access.log'.format(app)
+        self.seek_dir = os.path.join(os.path.dirname(__file__), 'seeks')
+        self.log_dir = '/var/log/nginx'
+        self.log_file = os.path.join(self.log_dir, '{}_access.log'.format(app))
         self.count_file = os.path.join(self.seek_dir, '{}.count'.format(app))
         self.seek = self.get_count()
 
@@ -82,10 +84,10 @@ class GetRequest(object):
 
 
 if __name__ == '__main__':
-    app = sys.argv[1]
+    app, key = sys.argv[1], sys.argv[2]
     match = GetRequest(app)
     try:
         match.run()
-        print(match.data_dict)
+        print(match.data_dict[key])
     except Exception as e:
-        print(e)
+        print(traceback.format_exc())
